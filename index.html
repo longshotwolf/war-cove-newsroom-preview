@@ -522,10 +522,26 @@ else window.addEventListener('load', deferRotation);
    (~/workspace/candle-commentary/relay/) — discovered exactly
    the way her seats discover it: speech-endpoint.json on the
    commentary Pages site names the keeper's live tunnels; the
-   Pages copy of speech.json is the standing fallback. Cadence
-   rules copied from her seat word for word: silent prime on
-   arm, never replay a line older than 10 minutes, a line whose
-   candle has rolled (exp) is dropped, never spoken as current.
+   Pages copy of speech.json is the standing fallback. Cadence:
+   silent prime on arm; freshness is the line's own candle — a
+   line stays speakable until its candle rolls (its exp stamp),
+   and only unstamped lines keep the 10-minute cap; the lane's
+   endpoints are raced, never walked one by one (a serial walk
+   through dead tunnels burned a 3-minute line's whole rise
+   window — the missed rises of Nov 18, 2026).
+
+   THE RISE POLICY — the Warlord's setup (Nov 18, 2026 ~7:10 PM
+   MST: "Set it up like that [the month-long pace]. But make
+   sure it's the beginning of every hour."): Simli Hobby meters
+   1,000 streaming minutes a month, so she does NOT rise for
+   every line. Priority 1 — Hera's 1H line at the beginning of
+   every hour — always rises, never budget-blocked. Priority 2
+   — temp top/bottom HIT lines and big-move 3M lines — rise
+   while the day's ~33 session-minutes hold. Everything else
+   she stays at her desk for, BY POLICY. Every skip is written
+   to the rise-policy ledger through the minter lane with its
+   reason, and the delivery-QC watch reads that ledger — a
+   policy skip judges BY POLICY there, never as a missed rise.
 
    THE TOKEN IS MINTED SERVER-SIDE. This page is static and
    holds no key: a house minter (simli-lane/simli_minter.py —
@@ -695,12 +711,130 @@ function mintErrorText(detail){
   }
 }
 
+/* ---------- the rise policy — her cadence is a budget ----------
+   (The Warlord's setup, stated in the header.) A session runs
+   ~30 s; the pace is ~33 session-minutes a day. Her counters
+   seed from the ledger's summary on arm (the ledger is the
+   durable record; this page's tally is the live authority
+   between seeds, backed by localStorage across a refresh). */
+const DAY_BUDGET_S = 33 * 60;
+const budget = { dayKey: null, daySeconds: 0, monthKey: null, monthSeconds: 0 };
+function nycDayKey(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+function budgetRoll(){
+  const dk = nycDayKey(), mk = dk.slice(0, 7);
+  if (budget.dayKey !== dk) { budget.dayKey = dk; budget.daySeconds = 0; }
+  if (budget.monthKey !== mk) { budget.monthKey = mk; budget.monthSeconds = 0; }
+}
+function budgetSave(){
+  try { localStorage.setItem("sheity-budget-v1", JSON.stringify(budget)); } catch (e) {}
+}
+function budgetLoadLocal(){
+  budgetRoll();
+  try {
+    const b = JSON.parse(localStorage.getItem("sheity-budget-v1") || "null");
+    if (b && b.dayKey === budget.dayKey) budget.daySeconds = Math.max(budget.daySeconds, +b.daySeconds || 0);
+    if (b && b.monthKey === budget.monthKey) budget.monthSeconds = Math.max(budget.monthSeconds, +b.monthSeconds || 0);
+  } catch (e) {}
+}
+let seedOk = false, lastSeedTry = 0;
+async function ledgerSeed(){
+  lastSeedTry = Date.now();
+  const eps = simliEndpoints ? simliEndpoints.slice() : [];
+  const urls = eps.map(ep => ep + "/sheity-ledger");
+  urls.push("/sheity-ledger");
+  for (const u of urls) {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 5000);
+      const r = await fetch(u, { signal: ctl.signal });
+      clearTimeout(t);
+      if (!r.ok) continue;
+      const j = await r.json();
+      budgetRoll();
+      if (j && j.day_key === budget.dayKey) budget.daySeconds = Math.max(budget.daySeconds, +j.day_session_seconds || 0);
+      if (j && j.month_key === budget.monthKey) budget.monthSeconds = Math.max(budget.monthSeconds, +j.month_session_seconds || 0);
+      budgetSave();
+      seedOk = true;
+      return;
+    } catch (e) {}
+  }
+}
+const pendingLedger = [];
+let ledgerFlushing = false;
+async function ledgerTry(rec){
+  const body = JSON.stringify(rec);
+  const eps = simliEndpoints ? simliEndpoints.slice() : [];
+  const urls = eps.map(ep => ep + "/sheity-ledger");
+  urls.push("/sheity-ledger");
+  for (const u of urls) {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 4000);
+      const r = await fetch(u, { method: "POST", headers: { "Content-Type": "text/plain" }, body, signal: ctl.signal });
+      clearTimeout(t);
+      if (r.ok) return true;
+    } catch (e) {}
+  }
+  return false;
+}
+async function ledgerPost(rec){
+  if (!await ledgerTry(rec) && pendingLedger.length < 50)
+    pendingLedger.push(rec); // retried on the next poll — a skip must reach the watch
+}
+function ledgerFlush(){
+  if (ledgerFlushing || !pendingLedger.length) return;
+  ledgerFlushing = true;
+  (async () => {
+    while (pendingLedger.length) {
+      if (!await ledgerTry(pendingLedger[0])) break;
+      pendingLedger.shift();
+    }
+    ledgerFlushing = false;
+  })();
+}
+/* The classification reads the line's own stamps first (the
+   office that made it, its frame) and its words second — the
+   offices' wording carries their calls: a temp HIT speaks its
+   oath ("Long the bottom, short the top." / "Short the top.
+   Long the bottom."), a standing level only "stands at", and
+   Sierra's big move says "big move" (her locked tiers). */
+function policyVerdict(it){
+  const text = it.text || "";
+  const frame = String(it.frame || "").toUpperCase();
+  const room = String(it.room || "").toLowerCase();
+  if (frame === "1H" || room === "hera" || /\bOne hour\./.test(text))
+    return { p: 1, why: "1H — beginning of the hour" };
+  const is3M = frame === "3M" || room === "sierra" || /\bThree minute\./.test(text);
+  if (is3M && /big move/i.test(text))
+    return { p: 2, why: "big-move 3M" };
+  const tempHit = room === "terra" || room === "vega" ||
+    /\. Temp (top|bottom) on the/.test(text) ||
+    /Long the bottom, short the top\.|Short the top\. Long the bottom\./.test(text);
+  if (tempHit && !/stands at/.test(text))
+    return { p: 2, why: "temp hit" };
+  if (/stands at/.test(text)) return { p: 0, reason: "standing-temp-level" };
+  if (is3M) return { p: 0, reason: "ordinary-3m" };
+  return { p: 0, reason: "other-office-line" };
+}
+
 /* ---------- the live session (Day Brief's two-line pattern) ---------- */
-let client = null, sessionOpen = false, connecting = false;
+let client = null, sessionOpen = false, connecting = false, sessionStartedAt = 0;
 /* Her hold-still face loads lazily — arming or the first pop pulls
    it in; it never rides the first paint. */
 function faceStill(){ if (!presFace.getAttribute('src')) presFace.src = presFace.dataset.src; }
 function teardownClient(){
+  if (sessionOpen && sessionStartedAt) {
+    /* A real session closes — its metered seconds go on the
+       budget tally and into the rise-policy ledger. */
+    const secs = Math.max(0, (Date.now() - sessionStartedAt) / 1000);
+    sessionStartedAt = 0;
+    budgetRoll();
+    budget.daySeconds += secs; budget.monthSeconds += secs;
+    budgetSave();
+    ledgerPost({ kind: "session", seconds: Math.round(secs * 10) / 10, at: Date.now() });
+  }
   const c = client; client = null; sessionOpen = false;
   if (c) { try { c.stop().catch(() => {}); } catch (e) {} }
   presFrame.classList.remove('reading');
@@ -750,7 +884,7 @@ async function openSession(){
       }, 25000);
     });
     if (landed && !dropped) {
-      sessionOpen = true; connecting = false;
+      sessionOpen = true; sessionStartedAt = Date.now(); connecting = false;
       presFrame.classList.add('reading');
       presFace.style.opacity = '0';
       setPill('reading');
@@ -868,6 +1002,8 @@ async function speechPoll(){
   if (polling && Date.now() - pollStartedAt < 20000) return;
   polling = true; pollStartedAt = Date.now(); // a poll hung past 20 s is abandoned — it must never wedge her trigger
   try {
+    ledgerFlush(); // any policy record that missed its ride goes out now
+    if (!seedOk && Date.now() - lastSeedTry > 30000) ledgerSeed(); // the budget tally seeds from the ledger until it lands
     const doc = await fetchSpeech();
     if (!doc) return;
     const live = doc.live || [];
@@ -896,6 +1032,25 @@ async function speechPoll(){
       else if (Date.now() - (it.at || 0) > 600000) continue;
       if (batchTexts.has(it.text) || queue.some(q => q.text === it.text)) continue; // the lane sometimes writes one line twice — she says it once
       batchTexts.add(it.text);
+      /* THE RISE POLICY (the policy block above): P1 always
+         rises; P2 rises while the day's session-minutes hold;
+         everything else is a desk line — skipped BY POLICY and
+         written to the ledger with its reason, so the
+         delivery-QC watch judges it BY POLICY, never as a
+         missed rise. */
+      const verdict = policyVerdict(it);
+      if (verdict.p === 0) {
+        ledgerPost({ kind: "skip", id, at: Date.now(), reason: verdict.reason, priority: 0, text: it.text });
+        continue;
+      }
+      if (verdict.p === 2) {
+        budgetRoll();
+        if (budget.daySeconds >= DAY_BUDGET_S) {
+          ledgerPost({ kind: "skip", id, at: Date.now(), reason: "p2-budget-spent", priority: 2, text: it.text });
+          continue;
+        }
+      }
+      ledgerPost({ kind: "rise", id, at: Date.now(), priority: verdict.p, why: verdict.why, text: it.text });
       queue.push({ file: liveBase + "speech/" + id + ".mp3", text: it.text, exp: it.exp || 0 });
     }
     if (queue.length) pump();
@@ -926,6 +1081,8 @@ presArm.addEventListener('click', async () => {
     if (sdkFailed) setStatus("<b>She's in.</b> Her live-face library didn't load, so she'll read in voice over her desk picture until it does.");
   }
   discoverSpeechLane(); discoverSimliLane();
+  budgetLoadLocal();
+  discoverSimliLane().then(() => ledgerSeed()); // her budget tally seeds from the ledger's standing summary
   speechLaneTimer = setInterval(discoverSpeechLane, 30000);
   laneTimer = setInterval(discoverSimliLane, 30000);
   speechPoll();
