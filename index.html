@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>War Cove Newsroom — Live Rotation</title>
+<style>
+  :root{
+    --bg:#05080a;
+    --panel:#0a1210;
+    --panel2:#0d1a16;
+    --line:#1d3a30;
+    --holo:#1dff9d;
+    --holo-dim:#0fbf76;
+    --ink:#eafff5;
+    --ink-dim:#9fd8c0;
+    --red:#ff4d4d;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(29,255,157,.08), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Segoe UI", Arial, Helvetica, sans-serif;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh;
+  }
+
+  /* ── Room header ─────────────────────────────── */
+  header{
+    display:flex;align-items:center;gap:14px;
+    padding:12px 20px 10px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(29,255,157,.06), transparent);
+    flex:0 0 auto;
+  }
+  header .crest{font-size:26px;line-height:1;}
+  header h1{
+    font-size:clamp(20px,3.2vw,34px);
+    font-weight:900;letter-spacing:.14em;
+    color:var(--ink);
+    text-shadow:0 0 18px rgba(29,255,157,.45);
+    white-space:nowrap;
+  }
+  header h1 .wc{color:var(--holo);}
+  header .chip{
+    margin-left:auto;
+    font-size:clamp(10px,1.3vw,13px);font-weight:700;letter-spacing:.18em;
+    color:#04120b;background:var(--holo);
+    padding:5px 12px;border-radius:999px;
+    box-shadow:0 0 14px rgba(29,255,157,.5);
+    white-space:nowrap;
+  }
+  header .sub{
+    font-size:clamp(10px,1.2vw,13px);letter-spacing:.22em;color:var(--ink-dim);
+    white-space:nowrap;
+  }
+  @media (max-width:1024px){ header .sub{display:none;} }
+
+  /* ── Room body: monitor beside the print ─────── */
+  main{
+    flex:1 1 auto;min-height:0;
+    display:grid;
+    grid-template-columns:300px minmax(0,7fr) minmax(0,5fr);
+    gap:16px;
+    padding:16px 20px 18px;
+  }
+  @media (max-width:1199px){
+    /* Tablet and below: the room becomes one scrolling column —
+       the presenter first and whole, the rotation below it. */
+    body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:auto;}
+    main{
+      flex:none;
+      grid-template-columns:minmax(0,1fr);
+      grid-template-rows:none;
+    }
+    .monitor .screen{aspect-ratio:16/9;flex:none;}
+    .print{overflow:visible;}
+  }
+  @media (max-width:760px){
+    main{gap:10px;padding:10px 12px 12px;}
+  }
+
+  /* ── The presenter — Sheity's spot ───────────── */
+  .presenter{
+    display:flex;flex-direction:column;min-height:0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 0 0 1px rgba(255,77,77,.14), 0 0 34px rgba(255,77,77,.07), inset 0 0 60px rgba(0,0,0,.55);
+    overflow:hidden;
+  }
+  .pres-top{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 14px;
+    background:var(--panel2);
+    border-bottom:1px solid var(--line);
+    font-size:clamp(11px,1.4vw,14px);font-weight:700;letter-spacing:.16em;color:var(--ink-dim);
+    flex:0 0 auto;
+  }
+  .pres-top .dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse 1.6s infinite;}
+  .pres-top .state{
+    margin-left:auto;color:#0d0505;background:var(--ink-dim);
+    font-size:.82em;letter-spacing:.14em;padding:3px 9px;border-radius:999px;white-space:nowrap;
+  }
+  .pres-top .state.live{background:var(--red);color:#fff;box-shadow:0 0 12px rgba(255,77,77,.6);}
+  .pres-frame{
+    position:relative;flex:1 1 auto;min-height:0;background:#000;overflow:hidden;
+  }
+  .pres-frame img,.pres-frame video{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;
+    transition:opacity .45s ease;
+  }
+  /* Her idle loop fades in over her portrait only once it can
+     actually play — the frame never sits on a buffering still. */
+  #presIdle{opacity:0;}
+  #presIdle.vid-on{opacity:1;}
+  .pres-frame.reading #presIdle{opacity:0;}
+  .pres-frame .layer-live{opacity:0;}
+  .pres-frame.reading .layer-live{opacity:1;}
+  .pres-frame.reading .layer-idle{opacity:0;}
+  .pres-caption{
+    position:absolute;left:0;right:0;bottom:0;
+    padding:22px 12px 9px;
+    background:linear-gradient(180deg, transparent, rgba(0,0,0,.82));
+    font-size:clamp(11px,1.4vw,14px);font-weight:700;line-height:1.35;color:var(--ink);
+    opacity:0;transition:opacity .3s ease;pointer-events:none;
+  }
+  .pres-frame.reading .pres-caption{opacity:1;}
+  .pres-bottom{
+    padding:9px 12px;background:var(--panel2);border-top:1px solid var(--line);flex:0 0 auto;
+  }
+  .pres-status{
+    font-size:clamp(10px,1.25vw,13px);line-height:1.45;color:var(--ink-dim);margin-bottom:8px;min-height:2.6em;
+  }
+  .pres-status b{color:var(--ink);}
+  .pres-btns{display:flex;gap:8px;}
+  .pres-btns button{flex:1 1 auto;}
+  @media (max-width:1199px){
+    /* Her whole frame, nameplate to status, at a true 3:4 —
+       nothing cropped, nothing squeezed into a strip. */
+    .presenter{flex-direction:column;}
+    .pres-frame{
+      flex:none;width:min(100%,430px);aspect-ratio:3/4;
+      margin:0 auto;
+    }
+    .pres-bottom{display:flex;flex-direction:column;}
+  }
+  @media (max-width:760px){
+    .pres-frame{width:min(100%,360px);}
+  }
+  @media (max-width:1199px) and (max-height:840px){
+    /* Short landscape tablets: shrink the frame so the whole
+       presenter — nameplate, frame, status — fits the height. */
+    .pres-frame{width:min(100%,320px);}
+    .pres-status{min-height:0;}
+  }
+
+  /* Monitor frame */
+  .monitor{
+    display:flex;flex-direction:column;min-height:0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 0 0 1px rgba(29,255,157,.12), 0 0 34px rgba(29,255,157,.10), inset 0 0 60px rgba(0,0,0,.55);
+    overflow:hidden;
+  }
+  .mon-top{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 14px;
+    background:var(--panel2);
+    border-bottom:1px solid var(--line);
+    font-size:clamp(11px,1.4vw,14px);font-weight:700;letter-spacing:.16em;color:var(--ink-dim);
+    flex:0 0 auto;
+  }
+  .mon-top .dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .mon-top .counter{margin-left:auto;color:var(--holo);letter-spacing:.2em;}
+  .screen{
+    flex:1 1 auto;min-height:0;
+    background:#000;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .screen video{
+    width:100%;height:100%;
+    max-height:100%;
+    object-fit:contain;
+    background:#000;
+    display:block;
+  }
+  .mon-bottom{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 12px;
+    background:var(--panel2);
+    border-top:1px solid var(--line);
+    flex:0 0 auto;
+  }
+  .now{
+    flex:1 1 auto;min-width:0;
+    font-size:clamp(11px,1.5vw,15px);font-weight:700;letter-spacing:.06em;color:var(--ink);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .now span{color:var(--holo);letter-spacing:.14em;font-size:.82em;margin-right:8px;}
+  button{
+    font:inherit;
+    font-size:clamp(12px,1.5vw,15px);font-weight:700;
+    color:var(--ink);
+    background:#12241e;
+    border:1px solid var(--holo-dim);
+    border-radius:9px;
+    min-height:36px;
+    padding:6px 14px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  button:hover{background:#173529;}
+  button:active{transform:translateY(1px);}
+  button[aria-pressed="true"]{background:var(--holo);color:#04120b;border-color:var(--holo);}
+
+  /* The print panel */
+  .print{
+    display:flex;flex-direction:column;min-height:0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 0 0 1px rgba(29,255,157,.10), inset 0 0 60px rgba(0,0,0,.45);
+    padding:18px 20px;
+    overflow:hidden;
+  }
+  .print .kicker{
+    font-size:clamp(10px,1.3vw,13px);font-weight:800;letter-spacing:.26em;color:var(--holo);
+    margin-bottom:10px;
+  }
+  .print h2{
+    font-size:clamp(22px,3.4vw,40px);
+    line-height:1.12;font-weight:900;letter-spacing:.01em;
+    text-wrap:balance;
+  }
+  .print .details{
+    margin-top:14px;
+    font-size:clamp(13px,1.7vw,18px);line-height:1.5;color:var(--ink-dim);
+  }
+  .print .adstatus{
+    margin-top:auto;padding-top:14px;
+    font-size:clamp(11px,1.4vw,14px);font-weight:700;letter-spacing:.1em;color:var(--ink-dim);
+    border-top:1px dashed var(--line);
+  }
+  .print .adstatus b{color:var(--holo);}
+  .dots{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .dots button{
+    width:14px;height:14px;min-height:14px;padding:0;border-radius:50%;
+    background:transparent;border:2px solid var(--holo-dim);
+  }
+  .dots button.on{background:var(--holo);border-color:var(--holo);box-shadow:0 0 10px rgba(29,255,157,.7);}
+  .fade{animation:fadein .45s ease both;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){
+    .fade{animation:none}
+    .mon-top .dot{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="crest">👑</div>
+  <h1><span class="wc">WAR COVE</span> NEWSROOM</h1>
+  <div class="sub">MATCHED PAIRS — PRINT + AD</div>
+  <div class="chip">ROTATION LIVE</div>
+</header>
+
+<main>
+  <!-- The presenter — Sheity's spot. Idle: she sits at her desk.
+       Reading: her live Simli face takes the frame and reads
+       Calla's candle lines aloud. -->
+  <aside class="presenter" aria-label="Sheity — presenter">
+    <div class="pres-top">
+      <div class="dot"></div>
+      <div>SHEITY — PRESIDENT</div>
+      <div class="state" id="presState">AT HER DESK</div>
+    </div>
+    <div class="pres-frame" id="presFrame">
+      <img class="layer-idle" src="sheity-desk-portrait.webp" alt="Sheity at her desk">
+      <video class="layer-idle" id="presIdle" src="sheity-idle-loop.mp4" poster="sheity-desk-portrait.webp" playsinline muted loop preload="metadata"></video>
+      <img id="presFace" data-src="sheity-face.webp" alt="" style="opacity:0;">
+      <video class="layer-live" id="presLive" playsinline muted preload="none"></video>
+      <audio id="presLiveAudio" muted></audio>
+      <audio id="presVoice"></audio>
+      <div class="pres-caption" id="presCaption"></div>
+    </div>
+    <div class="pres-bottom">
+      <div class="pres-status" id="presStatus">She sits at her desk until a candle read pops. <b>Bring her in</b> and she reads the candles live — her real face, Calla's lines, her voice.</div>
+      <div class="pres-btns">
+        <button id="presArm" type="button" aria-pressed="false" title="Bring Sheity in — she reads candle pops live">🔊 Bring Sheity in</button>
+        <button id="presStop" type="button" title="Send Sheity back to her desk" disabled>Back to her desk</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- The big monitor -->
+  <section class="monitor" aria-label="Newsroom monitor">
+    <div class="mon-top">
+      <div class="dot"></div>
+      <div>WAR COVE NEWS — MONITOR</div>
+      <div class="counter" id="counter">STORY 1 / 9</div>
+    </div>
+    <div class="screen">
+      <video id="ad" playsinline muted preload="none"></video>
+    </div>
+    <div class="mon-bottom">
+      <div class="now"><span>NOW SHOWING</span><span id="nowTitle" style="color:var(--ink);letter-spacing:.02em;font-size:1em;margin:0;"></span></div>
+      <button id="prevBtn" type="button" title="Previous story">⏮ Prev</button>
+      <button id="volBtn" type="button" aria-pressed="false" title="Turn the monitor sound on or off">🔇 Sound off</button>
+      <button id="nextBtn" type="button" title="Next story">Next ⏭</button>
+    </div>
+  </section>
+
+  <!-- The print -->
+  <aside class="print" aria-label="The print — current headline">
+    <div class="kicker">📰 THE PRINT — WAR COVE NEWS</div>
+    <h2 id="headline"></h2>
+    <p class="details" id="details"></p>
+    <div class="adstatus" id="adStatus"></div>
+    <div class="dots" id="dots"></div>
+  </aside>
+</main>
+
+<script>
+// The War Cove Newsroom rotation — matched headline ↔ ad pairs, in rotation
+// order. The first nine pairs mirror the Day Brief room's monitor (read off
+// the room's own getNewsPairs, Nov 15, 2026); the eight Margex poster pairs
+// after them were added to this standalone page on the Warlord's direct
+// order, Nov 16, 2026. The three-piece promo pair after the paper-game
+// promo was added to this standalone page on the Warlord's direct order,
+// Nov 17, 2026. Print and ad advance together: the pair rotates when
+// its ad ends.
+const PAIRS = [
+  { headline: "Binance Been Hacked",
+    details: "The first War Cove Crypto News Alert: the best thing for you to do is store your own crypto on your own cold wallet.",
+    adTitle: "Binance Cold Wallet",
+    ad: "ads/news-ad-binance-coldwallet.mp4" },
+  { headline: "Jensen Huang's GTC Berlin Keynote",
+    details: "",
+    adTitle: "Jensen Huang — GTC",
+    ad: "ads/news-ad-jensen-gtc.mp4" },
+  { headline: "Elon Musk — Boost",
+    details: "",
+    adTitle: "Elon / Boost",
+    ad: "ads/news-ad-elon-boost.mp4" },
+  { headline: "SpaceX Picked Qualcomm — Starlink's 5G Network Is Coming",
+    details: "",
+    adTitle: "SpaceX × Qualcomm — Starlink 5G",
+    ad: "ads/news-ad-spacex-qualcomm.mp4" },
+  { headline: "Elon & Palantir — The Golden Dome",
+    details: "",
+    adTitle: "Elon & Palantir — The Golden Dome",
+    ad: "ads/news-ad-elon-palantir.mp4" },
+  { headline: "DeepSeek Agents",
+    details: "",
+    adTitle: "DeepSeek Agents",
+    ad: "ads/news-ad-deepseek-agents.mp4" },
+  { headline: "SpaceX Contracts",
+    details: "",
+    adTitle: "SpaceX Contracts",
+    ad: "ads/news-ad-spacex-contracts.mp4" },
+  { headline: "NVIDIA CEO Update",
+    details: "The resignation, confirmed by NVIDIA's own 8-K filing — the allegations run as reports, never findings.",
+    adTitle: "NVIDIA CEO Update",
+    ad: "ads/news-ad-nvidia-ceo.mp4" },
+  { headline: "War Cove Paper Game — The Official Promo",
+    details: "The official dramatic promo for the War Cove Paper Game: Sheity presents the game, its board living inside the stream's own screens. The cut the Warlord approved on Nov 13, 2026 — it rides this rotation as a promo, not a news story.",
+    adTitle: "Paper Game Promo — Dramatic (Sheity)",
+    ad: "ads/news-promo-paper-game-dramatic.mp4" },
+  { headline: "The War Cove — The Three-Piece Promo",
+    details: "The three pieces of the Cove in one cut: the Day Brief, the Day Brief Stock Board, and the War Cove Paper Game. It rides this rotation as a promo, not a news story.",
+    adTitle: "Three-Piece Promo — Day Brief · Stock Board · Paper Game",
+    ad: "ads/news-promo-three-piece.mp4" },
+  { headline: "Witching Hour Trade — LTC Short +173.49%",
+    details: "The Witching Hour trade, off his Margex poster: Sell 100x LTCUSD, open $51.30, marked $50.41 — +173.49%.",
+    adTitle: "Margex — Witching Hour Short +173.49%",
+    ad: "ads/news-ad-margex-witching-hour-short-173.mp4" },
+  { headline: "Long the Bottom — LTC +521.7%",
+    details: "Off his Margex poster: Buy 100x LTCUSD, open $49.07, marked $51.63 — +521.7%.",
+    adTitle: "Margex — Long the Bottom +521.7%",
+    ad: "ads/news-ad-margex-long-bottom-521.mp4" },
+  { headline: "The Dump — LTC Short +350.1%",
+    details: "Off his Margex poster: Sell 100x LTCUSD, open $49.70, marked $47.96 — +350.1%.",
+    adTitle: "Margex — The Dump +350.1%",
+    ad: "ads/news-ad-margex-the-dump-350.mp4" },
+  { headline: "Bottom Long — LTC +203.87%",
+    details: "Off his Margex poster: Buy 100x LTCUSD, open $47.58, marked $48.55 — +203.87%.",
+    adTitle: "Margex — Bottom Long +203.87%",
+    ad: "ads/news-ad-margex-bottom-long-203.mp4" },
+  { headline: "Bottom Long — The Updated Trade +401.43%",
+    details: "The updated trade, off his Margex poster: Buy 100x LTCUSD, open $47.58, marked $49.49 — +401.43%.",
+    adTitle: "Margex — Bottom Long +401.43%",
+    ad: "ads/news-ad-margex-bottom-long-401.mp4" },
+  { headline: "Top of the AM Pump — Short +205.65%",
+    details: "His mark: the top of the AM pump. Off his Margex poster: Sell 100x LTCUSD, open $49.60, marked $48.58 — +205.65%.",
+    adTitle: "Margex — AM Pump Top Short +205.65%",
+    ad: "ads/news-ad-margex-am-pump-short-205.mp4" },
+  { headline: "Started From the Bottom — Now We Here +425.43%",
+    details: "His line: 'Started from the bottom now we here.' Off his Margex poster: Buy 100x LTCUSD, open $43.25, marked $45.09 — +425.43%.",
+    adTitle: "Margex — Bottom Long +425.43%",
+    ad: "ads/news-ad-margex-bottom-long-425.mp4" },
+  { headline: "Witching Hour Bottom Long — +267.14%",
+    details: "Off his Margex poster: Buy 100x LTCUSD, open $48.29, marked $49.58 — +267.14%.",
+    adTitle: "Margex — Witching Hour Bottom Long +267.14%",
+    ad: "ads/news-ad-margex-witching-hour-bottom-long-267.mp4" }
+];
+
+const video    = document.getElementById('ad');
+const headline = document.getElementById('headline');
+const details  = document.getElementById('details');
+const adStatus = document.getElementById('adStatus');
+const nowTitle = document.getElementById('nowTitle');
+const counter  = document.getElementById('counter');
+const dotsBox  = document.getElementById('dots');
+const volBtn   = document.getElementById('volBtn');
+
+let idx = 0;
+let soundOn = false;          // the room's law: ads START muted; one tap turns sound on
+let retried = false;          // one reload on the spot before a failed ad is skipped
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+PAIRS.forEach((_, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.title = 'Story ' + (i + 1);
+  b.addEventListener('click', () => show(i));
+  dotsBox.appendChild(b);
+});
+
+function show(i){
+  idx = ((i % PAIRS.length) + PAIRS.length) % PAIRS.length;
+  retried = false;
+  ensureKeeper();
+  const p = PAIRS[idx];
+
+  headline.textContent = p.headline;
+  headline.classList.remove('fade'); void headline.offsetWidth; headline.classList.add('fade');
+  details.textContent = p.details || '';
+  details.style.display = p.details ? '' : 'none';
+  adStatus.innerHTML = 'AD ON THE MONITOR — <b>' + p.adTitle + '</b>';
+  nowTitle.textContent = p.adTitle;
+  counter.textContent = 'STORY ' + (idx + 1) + ' / ' + PAIRS.length;
+  [...dotsBox.children].forEach((d, j) => d.classList.toggle('on', j === idx));
+
+  video.muted = !soundOn;
+  video.src = p.ad;
+  video.load();
+  const kick = video.play();
+  if (kick) kick.catch(() => {});
+}
+
+video.addEventListener('ended', () => show(idx + 1));
+video.addEventListener('canplay', () => { const k = video.play(); if (k) k.catch(() => {}); });
+video.addEventListener('error', () => {
+  if (!retried){ retried = true; video.load(); const k = video.play(); if (k) k.catch(() => {}); }
+  else { show(idx + 1); }
+}, true);
+
+// The keeper — the room's house pattern: while an ad is up, check every 1.5 s
+// and restart it whenever it is found paused, so the monitor never sits still.
+// It starts with the rotation itself (see the deferred start below).
+let keeperOn = false;
+function ensureKeeper(){
+  if (keeperOn) return;
+  keeperOn = true;
+  if (!reduced){
+    setInterval(() => {
+      if (video.src && video.paused && !video.ended && video.readyState > 2){
+        const k = video.play(); if (k) k.catch(() => {});
+      }
+    }, 1500);
+  } else {
+    video.setAttribute('controls', '');
+  }
+}
+
+volBtn.addEventListener('click', () => {
+  soundOn = !soundOn;
+  video.muted = !soundOn;
+  volBtn.textContent = soundOn ? '🔊 Sound on' : '🔇 Sound off';
+  volBtn.setAttribute('aria-pressed', String(soundOn));
+  if (soundOn){ const k = video.play(); if (k) k.catch(() => {}); }
+});
+document.getElementById('prevBtn').addEventListener('click', () => show(idx - 1));
+document.getElementById('nextBtn').addEventListener('click', () => show(idx + 1));
+
+/* The rotation starts only after the presenter has painted:
+   Sheity is the point of this page, so her portrait and her loop
+   get the lane first and the monitor's first ad loads behind
+   them — never in front of her. */
+function deferRotation(){
+  if ('requestIdleCallback' in window) requestIdleCallback(() => show(0), { timeout: 2500 });
+  else setTimeout(() => show(0), 1200);
+}
+if (document.readyState === 'complete') deferRotation();
+else window.addEventListener('load', deferRotation);
+</script>
+
+<script type="module">
+/* ── SHEITY'S PRESENTER ENGINE — STAGED PREVIEW ─────────────────
+   Two states, on the Warlord's spec:
+   • IDLE — she sits at her desk (her banked living loop over her
+     locked desk portrait) while no read is speaking.
+   • READING — when a candle read pops, her LIVE Simli face takes
+     the frame, looks at the screen, and reads the line aloud,
+     mouth moving with the words; the session closes the moment
+     the reading is done (Simli minutes are metered per open
+     session — the session exists only around speech).
+
+   THE LINES ARE CALLA'S. This widget reads nothing itself: it
+   polls the candle-commentary system's own speech lane — the
+   same speech.json playlist + Aria mp3s her seats read
+   (~/workspace/candle-commentary/relay/) — discovered exactly
+   the way her seats discover it: speech-endpoint.json on the
+   commentary Pages site names the keeper's live tunnels; the
+   Pages copy of speech.json is the standing fallback. Cadence
+   rules copied from her seat word for word: silent prime on
+   arm, never replay a line older than 10 minutes, a line whose
+   candle has rolled (exp) is dropped, never spoken as current.
+
+   THE TOKEN IS MINTED SERVER-SIDE. This page is static and
+   holds no key: a house minter (simli-lane/simli_minter.py —
+   the Day Brief's own mint pattern) hands it ONE short-lived
+   session token per reading, discovered through
+   simli-endpoint.json, written by the lane keeper next to this
+   page. Only the token crosses; the key never leaves the
+   connector.
+
+   SPEECH ROUTING — Calla's real Aria audio does double duty:
+   the page plays the line's mp3 aloud (her voice, the one he
+   hears) and streams the same audio, decoded to PCM16 16 kHz,
+   into the Simli session in real-time 100 ms chunks (the Day
+   Brief's LiveLineFeeder pattern), so the live face speaks the
+   line lip-synced. Simli's own return audio is held muted.
+   If the face can't land, she still reads — voice over her
+   desk picture — and the status line says so plain.        */
+
+const COMMENTARY = "https://longshotwolf.github.io/war-cove-candle-commentary/";
+const presFrame   = document.getElementById('presFrame');
+const presIdle    = document.getElementById('presIdle');
+const presFace    = document.getElementById('presFace');
+const presLive    = document.getElementById('presLive');
+const presLiveAud = document.getElementById('presLiveAudio');
+const presVoice   = document.getElementById('presVoice');
+const presCaption = document.getElementById('presCaption');
+const presStatus  = document.getElementById('presStatus');
+const presState   = document.getElementById('presState');
+const presArm     = document.getElementById('presArm');
+const presStop    = document.getElementById('presStop');
+const presReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const INVITE = 'She sits at her desk until a candle read pops. <b>Bring her in</b> and she reads the candles live — her real face, Calla\'s lines, her voice.';
+let SimliClient = null, LogLevel = null, sdkFailed = false;
+
+let armed = false;
+let audioCtx = null;
+
+/* ---------- status / state ---------- */
+function setPill(mode){
+  const map = { desk: "AT HER DESK", in: "SHE'S IN", connecting: "CONNECTING…", reading: "LIVE — READING" };
+  presState.textContent = map[mode] || map.desk;
+  presState.classList.toggle('live', mode === 'reading' || mode === 'connecting');
+}
+function setStatus(html){ presStatus.innerHTML = html; }
+
+/* ---------- Calla's speech lane (her seat's own discovery) ---------- */
+let speechDoc = null, laneBase = null, liveBase = COMMENTARY;
+const playedLive = new Set();
+let livePrimed = false;
+async function discoverSpeechLane(){
+  try {
+    const r = await fetch(COMMENTARY + "speech-endpoint.json?cb=" + Date.now());
+    const j = await r.json();
+    const eps = (j && j.endpoints && j.endpoints.length) ? j.endpoints : (j && j.endpoint ? [j.endpoint] : []);
+    if (eps.length) laneBase = eps.map(u => String(u).replace(/\/+$/, ""));
+  } catch (e) {}
+}
+async function fetchSpeech(){
+  if (laneBase) {
+    for (const base of laneBase) {
+      try {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 2500);
+        const r = await fetch(base + "/speech.json?cb=" + Date.now(), { signal: ctl.signal });
+        clearTimeout(t);
+        if (r.ok) { speechDoc = await r.json(); liveBase = base + "/"; return speechDoc; }
+      } catch (e) {}
+    }
+  }
+  try {
+    const r = await fetch(COMMENTARY + "speech.json?cb=" + Date.now());
+    if (!r.ok) return speechDoc;
+    speechDoc = await r.json();
+    liveBase = COMMENTARY;
+    return speechDoc;
+  } catch (e) { return speechDoc; }
+}
+
+/* ---------- the token lane (server-side mint, discovered) ---------- */
+let simliEndpoints = null;
+async function discoverSimliLane(){
+  try {
+    const r = await fetch("simli-endpoint.json?cb=" + Date.now());
+    const j = await r.json();
+    const eps = (j && j.endpoints && j.endpoints.length) ? j.endpoints : (j && j.endpoint ? [j.endpoint] : []);
+    if (eps.length) simliEndpoints = eps.map(u => String(u).replace(/\/+$/, ""));
+  } catch (e) {}
+}
+async function mintToken(){
+  const tries = [];
+  if (simliEndpoints) for (const ep of simliEndpoints) tries.push(ep + "/simli-token");
+  tries.push("/simli-token"); // same origin, when the minter itself serves this page
+  let detail = null;
+  for (const url of tries) {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(url + "?cb=" + Date.now(), { signal: ctl.signal });
+      clearTimeout(t);
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (j && j.available && j.sessionToken)
+        return { ok: true, token: j.sessionToken, ice: j.iceServers || null };
+      if (j && j.detail) { detail = j.detail; break; } // a Simli refusal names itself — no retry changes it
+    } catch (e) {}
+  }
+  return { ok: false, detail };
+}
+function mintErrorText(detail){
+  switch (detail) {
+    case "INVALID_FACE_ID":
+      return "Simli didn't know her face, so her live face can't start. Her desk picture is holding her frame and no minutes were used.";
+    case "BILLING_ERROR":
+    case "MISSING_BILLING_INFO":
+      return "The Simli account is out of minutes for now, so her live face can't start. Her desk picture is holding her frame.";
+    case "INVALID_API_KEY":
+      return "The Simli key was refused, so her live face can't start until the connection is fixed. Her desk picture is holding her frame.";
+    default:
+      return "Her live line didn't open just now — her desk picture is holding her frame. She'll try the face again on the next read.";
+  }
+}
+
+/* ---------- the live session (Day Brief's two-line pattern) ---------- */
+let client = null, sessionOpen = false, connecting = false;
+/* Her hold-still face loads lazily — arming or the first pop pulls
+   it in; it never rides the first paint. */
+function faceStill(){ if (!presFace.getAttribute('src')) presFace.src = presFace.dataset.src; }
+function teardownClient(){
+  const c = client; client = null; sessionOpen = false;
+  if (c) { try { c.stop().catch(() => {}); } catch (e) {} }
+  presFrame.classList.remove('reading');
+  presFace.style.opacity = '0';
+}
+async function openSession(){
+  if (sessionOpen) return { ok: true };
+  if (connecting) return { ok: false, busy: true };
+  if (sdkFailed) return { ok: false, detail: "SDK" };
+  connecting = true;
+  setPill('connecting');
+  setStatus("A read popped — <b>bringing her face in…</b>");
+  faceStill();
+  presFace.style.opacity = '1'; // her real face holds the frame while the line connects
+  const mint = await mintToken();
+  if (!mint.ok) {
+    connecting = false; presFace.style.opacity = '0'; setPill('in');
+    return { ok: false, detail: mint.detail };
+  }
+  presLive.muted = true; presLiveAud.muted = true; presLiveAud.volume = 0;
+  for (const attempt of ["livekit", "p2p"]) {
+    if (!armed) { connecting = false; return { ok: false }; }
+    let c = null;
+    try {
+      c = attempt === "p2p"
+        ? new SimliClient(mint.token, presLive, presLiveAud,
+            (mint.ice && mint.ice.length) ? mint.ice : [{ urls: ["stun:stun.l.google.com:19302"] }],
+            LogLevel.ERROR, "p2p")
+        : new SimliClient(mint.token, presLive, presLiveAud, null, LogLevel.ERROR, "livekit");
+    } catch (e) { continue; }
+    client = c;
+    let dropped = false;
+    c.on("error", () => {
+      dropped = true;
+      if (sessionOpen && client === c) {
+        teardownClient();
+        setStatus("The live line dropped — <b>she finishes this read in voice</b> over her desk picture.");
+      }
+    });
+    const landed = await new Promise(resolve => {
+      let done = false;
+      const finish = v => { if (!done) { done = true; resolve(v); } };
+      c.start().then(() => finish(true), () => finish(false)); // start() resolves on the SDK's first frame
+      setTimeout(() => { // last-chance proof, the Day Brief's own check
+        if (presLive.readyState >= 2 && presLive.videoWidth > 0) finish(true);
+        else finish(false);
+      }, 25000);
+    });
+    if (landed && !dropped) {
+      sessionOpen = true; connecting = false;
+      presFrame.classList.add('reading');
+      presFace.style.opacity = '0';
+      setPill('reading');
+      try { presLive.play().catch(() => {}); } catch (e) {}
+      return { ok: true };
+    }
+    if (client === c) client = null;
+    try { await c.stop(); } catch (e) {}
+  }
+  connecting = false; presFace.style.opacity = '0'; setPill('in');
+  return { ok: false, detail: "CONNECT" };
+}
+
+/* ---------- feeding her lines to the face (LiveLineFeeder pattern) ---------- */
+let feedTimer = null;
+function stopFeeding(){ if (feedTimer != null) { clearInterval(feedTimer); feedTimer = null; } }
+function feedPCM(pcm){
+  return new Promise(resolve => {
+    if (!client || !sessionOpen) { resolve(); return; }
+    const CHUNK = 1600; // 100 ms of 16 kHz audio per send
+    let offset = 0;
+    const send = () => {
+      const c = client;
+      if (!c || !sessionOpen) { stopFeeding(); resolve(); return; }
+      const end = Math.min(offset + CHUNK, pcm.length);
+      const slice = pcm.subarray(offset, end);
+      const bytes = new Uint8Array(slice.byteLength);
+      bytes.set(new Uint8Array(slice.buffer, slice.byteOffset, slice.byteLength));
+      try { c.sendAudioData(bytes); } catch (e) { stopFeeding(); resolve(); return; }
+      offset = end;
+      if (offset >= pcm.length) { stopFeeding(); resolve(); }
+    };
+    send();
+    feedTimer = setInterval(send, 100);
+  });
+}
+async function lineAudio(url){
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  const buf = await r.arrayBuffer();
+  const decoded = await audioCtx.decodeAudioData(buf.slice(0));
+  const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * 16000)), 16000);
+  const src = off.createBufferSource();
+  src.buffer = decoded; src.connect(off.destination); src.start();
+  const rendered = await off.startRendering();
+  const data = rendered.getChannelData(0);
+  const pcm = new Int16Array(data.length);
+  for (let i = 0; i < data.length; i++)
+    pcm[i] = Math.max(-32767, Math.min(32767, Math.round(data[i] * 32767)));
+  return { pcm, blobUrl: URL.createObjectURL(new Blob([buf], { type: "audio/mpeg" })) };
+}
+function playVoice(url){
+  return new Promise(resolve => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+    presVoice.onended = finish;
+    presVoice.onerror = finish;
+    setTimeout(finish, 45000); // a stuck file never wedges her voice
+    presVoice.src = url;
+    presVoice.play().catch(finish);
+  });
+}
+
+/* ---------- the reading pump ---------- */
+const queue = [];
+let pumping = false, voiceOnly = false, drainTimer = null;
+function scheduleDrain(){
+  if (drainTimer != null) clearTimeout(drainTimer);
+  drainTimer = setTimeout(() => {
+    drainTimer = null;
+    if (armed && !queue.length && !pumping) {
+      teardownClient();          // the reading is done — the session closes
+      voiceOnly = false;         // the next pop tries her face fresh
+      if (armed) { setPill('in'); setStatus("<b>She's in.</b> Back at her desk — listening for the next candle pop."); }
+    }
+  }, 5000);
+}
+async function speakLine(item){
+  presCaption.textContent = item.text;
+  if (sessionOpen) setPill('reading');
+  let got = null;
+  try { got = await lineAudio(item.file); } catch (e) { got = null; }
+  if (!got) { presCaption.textContent = ""; return; } // the line's audio didn't land — skipped, never invented
+  const fed = sessionOpen ? feedPCM(got.pcm) : Promise.resolve();
+  await Promise.all([fed, playVoice(got.blobUrl)]);
+  URL.revokeObjectURL(got.blobUrl);
+  presCaption.textContent = "";
+}
+async function pump(){
+  if (pumping) return;
+  pumping = true;
+  while (armed && queue.length) {
+    const item = queue[0];
+    if (item.exp && Date.now() > item.exp) { queue.shift(); continue; }
+    if (!sessionOpen && !voiceOnly) {
+      const res = await openSession();
+      if (!res.ok && !res.busy) {
+        voiceOnly = true;
+        setStatus("<b>" + mintErrorText(res.detail) + "</b> She reads this one in voice over her desk picture.");
+      }
+      if (!res.ok && res.busy) break;
+    }
+    queue.shift();
+    await speakLine(item);
+  }
+  pumping = false;
+  if (armed) scheduleDrain();
+}
+
+/* ---------- the poll — her seat's cadence rules, copied ---------- */
+let polling = false;
+async function speechPoll(){
+  if (polling || !armed) return;
+  polling = true;
+  try {
+    const doc = await fetchSpeech();
+    if (!doc) return;
+    const live = doc.live || [];
+    if (!livePrimed) {
+      for (const id of live) playedLive.add(id);  // silent prime on arm
+      livePrimed = true;
+      return;
+    }
+    for (const id of live) {
+      if (playedLive.has(id)) continue;
+      playedLive.add(id);
+      const it = (doc.items || {})[id];
+      if (!it || !it.text) continue;
+      if (Date.now() - (it.at || 0) > 600000) continue; // never replay old cadence
+      if (it.exp && Date.now() > it.exp) continue;      // one candle behind — dropped
+      queue.push({ file: liveBase + "speech/" + id + ".mp3", text: it.text, exp: it.exp || 0 });
+    }
+    if (queue.length) pump();
+  } finally { polling = false; }
+}
+
+/* ---------- arm / disarm — sessions only on his explicit action ---------- */
+let pollTimer = null, laneTimer = null, speechLaneTimer = null;
+presArm.addEventListener('click', async () => {
+  if (armed) return;
+  armed = true;
+  presArm.disabled = true; presArm.setAttribute('aria-pressed', 'true');
+  presStop.disabled = false;
+  setPill('in');
+  setStatus("<b>She's in.</b> Listening for the next candle pop — when one lands, her face comes up and she reads it.");
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+  } catch (e) {}
+  if (!presReduced) { try { presIdle.play().catch(() => {}); } catch (e) {} }
+  faceStill(); // her hold-still warms up while she listens, off the first paint
+  if (!SimliClient && !sdkFailed) {
+    try {
+      const mod = await import("./vendor/simli-client.bundle.js");
+      SimliClient = mod.SimliClient; LogLevel = mod.LogLevel;
+      if (!SimliClient) sdkFailed = true;
+    } catch (e) { sdkFailed = true; }
+    if (sdkFailed) setStatus("<b>She's in.</b> Her live-face library didn't load, so she'll read in voice over her desk picture until it does.");
+  }
+  discoverSpeechLane(); discoverSimliLane();
+  speechLaneTimer = setInterval(discoverSpeechLane, 60000);
+  laneTimer = setInterval(discoverSimliLane, 60000);
+  speechPoll();
+  pollTimer = setInterval(speechPoll, 5000);
+});
+presStop.addEventListener('click', () => {
+  armed = false;
+  queue.length = 0;
+  if (pollTimer != null) { clearInterval(pollTimer); pollTimer = null; }
+  if (laneTimer != null) { clearInterval(laneTimer); laneTimer = null; }
+  if (speechLaneTimer != null) { clearInterval(speechLaneTimer); speechLaneTimer = null; }
+  if (drainTimer != null) { clearTimeout(drainTimer); drainTimer = null; }
+  stopFeeding();
+  try { presVoice.pause(); } catch (e) {}
+  teardownClient();
+  livePrimed = false; playedLive.clear();
+  presArm.disabled = false; presArm.setAttribute('aria-pressed', 'false');
+  presStop.disabled = true;
+  setPill('desk');
+  setStatus(INVITE);
+});
+
+/* Idle loop: her portrait is on the frame instantly; the loop
+   fades in over it only when it can actually play. */
+presIdle.addEventListener('canplay', () => presIdle.classList.add('vid-on'));
+presIdle.addEventListener('playing', () => presIdle.classList.add('vid-on'));
+
+/* Idle loop: autoplay muted like the room's own pictures; under
+   reduced motion it stands on her desk portrait with controls. */
+if (presReduced) {
+  presIdle.removeAttribute('autoplay');
+  presIdle.setAttribute('controls', '');
+} else {
+  const k = presIdle.play();
+  if (k) k.catch(() => {});
+}
+setPill('desk');
+</script>
+</body>
+</html>
