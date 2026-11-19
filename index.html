@@ -521,8 +521,13 @@ else window.addEventListener('load', deferRotation);
    same speech.json playlist + Aria mp3s her seats read
    (~/workspace/candle-commentary/relay/) — discovered exactly
    the way her seats discover it: speech-endpoint.json on the
-   commentary Pages site names the keeper's live tunnels; the
-   Pages copy of speech.json is the standing fallback. Cadence:
+   commentary Pages site names the keeper's live tunnels AND
+   the stable door — the commentary Pages copy of speech.json
+   itself, a fixed address that never rotates (Nov 19, 2026:
+   the stable door stands first in her candidate list and is
+   always raced; the freshest doc wins the drink, so a stale
+   Pages answer never beats a live tunnel, and dead tunnels
+   can never starve her while the stable door answers). Cadence:
    silent prime on arm; freshness is the line's own candle — a
    line stays speakable until its candle rolls (its exp stamp),
    and only unstamped lines keep the 10-minute cap; the lane's
@@ -590,6 +595,7 @@ function setStatus(html){ presStatus.innerHTML = html; }
 
 /* ---------- Calla's speech lane (her seat's own discovery) ---------- */
 let speechDoc = null, laneBase = null, liveBase = COMMENTARY;
+let stableBase = COMMENTARY; // the stable door — the endpoint doc's "stable" field names it
 const playedLive = new Set();
 let livePrimed = false;
 async function discoverSpeechLane(){
@@ -599,6 +605,7 @@ async function discoverSpeechLane(){
     const r = await fetch(COMMENTARY + "speech-endpoint.json?cb=" + Date.now(), { signal: ctl.signal });
     clearTimeout(t);
     const j = await r.json();
+    if (j && j.stable) stableBase = String(j.stable).replace(/\/*$/, "/");
     const eps = (j && j.endpoints && j.endpoints.length) ? j.endpoints : (j && j.endpoint ? [j.endpoint] : []);
     if (eps.length) laneBase = eps.map(u => String(u).replace(/\/+$/, ""));
   } catch (e) {}
@@ -625,17 +632,62 @@ function fetchRace(urls, timeoutMs){
     return win;
   }).catch(() => null);
 }
+/* The STABLE DOOR (Nov 19, 2026): the commentary Pages copy is a
+   fixed address that never rotates. It stands FIRST in the
+   candidate list and is always in the race, so no tunnel outage
+   can starve her chair — the seven lane deaths of Nov 18–19 were
+   all rotating tunnels dying together. But a Pages build trails
+   a pop by minutes while a live tunnel trails it by ~a second,
+   so the winner is the FRESHEST doc, not the first answer: the
+   first healthy answer opens a short grace window (900 ms) for
+   the other doors, then the doc with the newest "at" stamp is
+   the drink. A stale Pages answer can no longer beat a fresh
+   tunnel just by answering first — and when every tunnel is
+   dead, the stable door's doc is what she drinks: its
+   long-lived lines (the top-of-hour 1H, the big-frame temp
+   hits) are still inside their candle life when they land. */
+function fetchFreshest(urls, timeoutMs, graceMs){
+  return new Promise(resolve => {
+    const ctls = urls.map(() => new AbortController());
+    const results = [];
+    let settled = 0, graceTimer = null, done = false;
+    const finish = () => {
+      if (done) return; done = true;
+      ctls.forEach(c => { try { c.abort(); } catch (e) {} });
+      if (!results.length) return resolve(null);
+      results.sort((a, b) => (b.at || 0) - (a.at || 0));
+      resolve(results[0]);
+    };
+    urls.forEach((u, i) => {
+      const t = setTimeout(() => { try { ctls[i].abort(); } catch (e) {} }, timeoutMs);
+      (async () => {
+        try {
+          const r = await fetch(u, { signal: ctls[i].signal });
+          if (!r.ok) throw new Error("http " + r.status);
+          const doc = await r.json();
+          if (doc && typeof doc === "object" && "items" in doc) {
+            results.push({ url: u, doc, at: doc.at || 0 });
+            if (!graceTimer) graceTimer = setTimeout(finish, graceMs);
+          }
+        } catch (e) {}
+        finally {
+          clearTimeout(t);
+          settled++;
+          if (settled === urls.length) finish();
+        }
+      })();
+    });
+    setTimeout(finish, timeoutMs + graceMs + 500);
+  });
+}
 async function fetchSpeech(){
-  const urls = [];
+  const urls = [stableBase + "speech.json?cb=" + Date.now()];
   if (laneBase) for (const base of laneBase) urls.push(base + "/speech.json?cb=" + Date.now());
-  urls.push(COMMENTARY + "speech.json?cb=" + Date.now());
-  const win = await fetchRace(urls, 6000);
-  if (!win) { discoverSpeechLane(); return speechDoc; } // every lane missed — refresh discovery, hold the last doc
-  try {
-    speechDoc = await win.res.json();
-    liveBase = win.url.replace(/speech\.json.*$/, "");
-    return speechDoc;
-  } catch (e) { return speechDoc; }
+  const win = await fetchFreshest(urls, 6000, 900);
+  if (!win) { discoverSpeechLane(); return speechDoc; } // every door missed — refresh discovery, hold the last doc
+  speechDoc = win.doc;
+  liveBase = win.url.replace(/speech\.json.*$/, "");
+  return speechDoc;
 }
 
 /* ---------- the token lane (server-side mint, discovered) ---------- */
