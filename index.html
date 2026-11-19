@@ -578,29 +578,46 @@ const playedLive = new Set();
 let livePrimed = false;
 async function discoverSpeechLane(){
   try {
-    const r = await fetch(COMMENTARY + "speech-endpoint.json?cb=" + Date.now());
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch(COMMENTARY + "speech-endpoint.json?cb=" + Date.now(), { signal: ctl.signal });
+    clearTimeout(t);
     const j = await r.json();
     const eps = (j && j.endpoints && j.endpoints.length) ? j.endpoints : (j && j.endpoint ? [j.endpoint] : []);
     if (eps.length) laneBase = eps.map(u => String(u).replace(/\/+$/, ""));
   } catch (e) {}
 }
+/* Race every candidate at once and take the first healthy answer.
+   The tunnels rotate and die without notice, and walking them one
+   by one burned the whole rise window on dead ends — a 3-minute
+   line can have ~25 seconds of speakable life, and the serial
+   walk (plus a fallback fetch with no timeout at all, which could
+   hang the poll forever) spent it before she ever rose. */
+function fetchRace(urls, timeoutMs){
+  if (!urls.length) return Promise.resolve(null);
+  const ctls = urls.map(() => new AbortController());
+  const tries = urls.map((u, i) => (async () => {
+    const t = setTimeout(() => { try { ctls[i].abort(); } catch (e) {} }, timeoutMs);
+    try {
+      const r = await fetch(u, { signal: ctls[i].signal });
+      if (!r.ok) throw new Error("http " + r.status);
+      return { url: u, res: r };
+    } finally { clearTimeout(t); }
+  })());
+  return Promise.any(tries).then(win => {
+    urls.forEach((u, i) => { if (u !== win.url) { try { ctls[i].abort(); } catch (e) {} } });
+    return win;
+  }).catch(() => null);
+}
 async function fetchSpeech(){
-  if (laneBase) {
-    for (const base of laneBase) {
-      try {
-        const ctl = new AbortController();
-        const t = setTimeout(() => ctl.abort(), 2500);
-        const r = await fetch(base + "/speech.json?cb=" + Date.now(), { signal: ctl.signal });
-        clearTimeout(t);
-        if (r.ok) { speechDoc = await r.json(); liveBase = base + "/"; return speechDoc; }
-      } catch (e) {}
-    }
-  }
+  const urls = [];
+  if (laneBase) for (const base of laneBase) urls.push(base + "/speech.json?cb=" + Date.now());
+  urls.push(COMMENTARY + "speech.json?cb=" + Date.now());
+  const win = await fetchRace(urls, 6000);
+  if (!win) { discoverSpeechLane(); return speechDoc; } // every lane missed — refresh discovery, hold the last doc
   try {
-    const r = await fetch(COMMENTARY + "speech.json?cb=" + Date.now());
-    if (!r.ok) return speechDoc;
-    speechDoc = await r.json();
-    liveBase = COMMENTARY;
+    speechDoc = await win.res.json();
+    liveBase = win.url.replace(/speech\.json.*$/, "");
     return speechDoc;
   } catch (e) { return speechDoc; }
 }
@@ -609,30 +626,59 @@ async function fetchSpeech(){
 let simliEndpoints = null;
 async function discoverSimliLane(){
   try {
-    const r = await fetch("simli-endpoint.json?cb=" + Date.now());
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch("simli-endpoint.json?cb=" + Date.now(), { signal: ctl.signal });
+    clearTimeout(t);
     const j = await r.json();
     const eps = (j && j.endpoints && j.endpoints.length) ? j.endpoints : (j && j.endpoint ? [j.endpoint] : []);
     if (eps.length) simliEndpoints = eps.map(u => String(u).replace(/\/+$/, ""));
   } catch (e) {}
 }
 async function mintToken(){
-  const tries = [];
-  if (simliEndpoints) for (const ep of simliEndpoints) tries.push(ep + "/simli-token");
-  tries.push("/simli-token"); // same origin, when the minter itself serves this page
+  /* Race the discovered ends: the first minter answer (HTTP 200)
+     is decisive — a token, or Simli's own named refusal, which no
+     retry changes. Tunnel noise (502s, dead ends) is not decisive;
+     the serial walk used to spend 8 s on each dead end first. */
+  const eps = simliEndpoints ? simliEndpoints.slice() : [];
   let detail = null;
-  for (const url of tries) {
-    try {
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 8000);
-      const r = await fetch(url + "?cb=" + Date.now(), { signal: ctl.signal });
-      clearTimeout(t);
-      if (!r.ok) continue;
+  if (eps.length) {
+    const win = await new Promise(resolve => {
+      let left = eps.length, settled = false;
+      const done = v => { if (!settled) { settled = true; resolve(v); } };
+      eps.forEach(ep => {
+        (async () => {
+          try {
+            const ctl = new AbortController();
+            const t = setTimeout(() => ctl.abort(), 10000);
+            const r = await fetch(ep + "/simli-token?cb=" + Date.now(), { signal: ctl.signal });
+            clearTimeout(t);
+            if (!r.ok) throw new Error("http " + r.status);
+            done({ j: await r.json() });
+          } catch (e) { if (--left <= 0) done(null); }
+        })();
+      });
+    });
+    if (win && win.j) {
+      const j = win.j;
+      if (j.available && j.sessionToken)
+        return { ok: true, token: j.sessionToken, ice: j.iceServers || null };
+      if (j.detail) return { ok: false, detail: j.detail };
+    }
+  }
+  try { // same origin, when the minter itself serves this page
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch("/simli-token?cb=" + Date.now(), { signal: ctl.signal });
+    clearTimeout(t);
+    if (r.ok) {
       const j = await r.json();
       if (j && j.available && j.sessionToken)
         return { ok: true, token: j.sessionToken, ice: j.iceServers || null };
-      if (j && j.detail) { detail = j.detail; break; } // a Simli refusal names itself — no retry changes it
-    } catch (e) {}
-  }
+      if (j && j.detail) detail = j.detail;
+    }
+  } catch (e) {}
+  discoverSimliLane(); // the ends we hold may be dead — refresh for the next pop
   return { ok: false, detail };
 }
 function mintErrorText(detail){
@@ -816,10 +862,11 @@ async function pump(){
 }
 
 /* ---------- the poll — her seat's cadence rules, copied ---------- */
-let polling = false;
+let polling = false, pollStartedAt = 0, lastPollDone = 0;
 async function speechPoll(){
-  if (polling || !armed) return;
-  polling = true;
+  if (!armed) return;
+  if (polling && Date.now() - pollStartedAt < 20000) return;
+  polling = true; pollStartedAt = Date.now(); // a poll hung past 20 s is abandoned — it must never wedge her trigger
   try {
     const doc = await fetchSpeech();
     if (!doc) return;
@@ -829,21 +876,34 @@ async function speechPoll(){
       livePrimed = true;
       return;
     }
+    const batchTexts = new Set();
     for (const id of live) {
       if (playedLive.has(id)) continue;
       playedLive.add(id);
       const it = (doc.items || {})[id];
       if (!it || !it.text) continue;
-      if (Date.now() - (it.at || 0) > 600000) continue; // never replay old cadence
-      if (it.exp && Date.now() > it.exp) continue;      // one candle behind — dropped
+      /* Freshness is the line's own candle: a cadence line stays
+         speakable while its candle is still the forming candle —
+         until its exp, the moment that candle rolls (the lane's
+         own stamp). Once rolled it is one candle behind and
+         drops. The old flat 10-minute cap killed lines whose
+         candle was still running — an hour line had an hour to
+         live and died at minute ten after any stall. Lines with
+         no candle stamp keep the 10-minute cap. So after a stall
+         she wakes and reads the CURRENT candle's lines, never a
+         rolled candle's. */
+      if (it.exp) { if (Date.now() > it.exp) continue; }
+      else if (Date.now() - (it.at || 0) > 600000) continue;
+      if (batchTexts.has(it.text) || queue.some(q => q.text === it.text)) continue; // the lane sometimes writes one line twice — she says it once
+      batchTexts.add(it.text);
       queue.push({ file: liveBase + "speech/" + id + ".mp3", text: it.text, exp: it.exp || 0 });
     }
     if (queue.length) pump();
-  } finally { polling = false; }
+  } finally { polling = false; lastPollDone = Date.now(); }
 }
 
 /* ---------- arm / disarm — sessions only on his explicit action ---------- */
-let pollTimer = null, laneTimer = null, speechLaneTimer = null;
+let pollTimer = null, laneTimer = null, speechLaneTimer = null, wakeTimer = null;
 presArm.addEventListener('click', async () => {
   if (armed) return;
   armed = true;
@@ -866,17 +926,25 @@ presArm.addEventListener('click', async () => {
     if (sdkFailed) setStatus("<b>She's in.</b> Her live-face library didn't load, so she'll read in voice over her desk picture until it does.");
   }
   discoverSpeechLane(); discoverSimliLane();
-  speechLaneTimer = setInterval(discoverSpeechLane, 60000);
-  laneTimer = setInterval(discoverSimliLane, 60000);
+  speechLaneTimer = setInterval(discoverSpeechLane, 30000);
+  laneTimer = setInterval(discoverSimliLane, 30000);
   speechPoll();
   pollTimer = setInterval(speechPoll, 5000);
+  /* OBS throttles a hidden source's timers hard. This 1 s ticker
+     cannot beat the throttle either, but the moment any timer is
+     allowed to run again it forces the poll the 5 s cadence would
+     have drifted past — and thanks to the candle rule above, the
+     lines it finds are the current candle's, still speakable. */
+  wakeTimer = setInterval(() => { if (armed && Date.now() - lastPollDone > 7000) speechPoll(); }, 1000);
 });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && armed) speechPoll(); });
 presStop.addEventListener('click', () => {
   armed = false;
   queue.length = 0;
   if (pollTimer != null) { clearInterval(pollTimer); pollTimer = null; }
   if (laneTimer != null) { clearInterval(laneTimer); laneTimer = null; }
   if (speechLaneTimer != null) { clearInterval(speechLaneTimer); speechLaneTimer = null; }
+  if (wakeTimer != null) { clearInterval(wakeTimer); wakeTimer = null; }
   if (drainTimer != null) { clearTimeout(drainTimer); drainTimer = null; }
   stopFeeding();
   try { presVoice.pause(); } catch (e) {}
@@ -904,13 +972,13 @@ if (presReduced) {
 }
 setPill('desk');
 </script>
-<!-- WC-LINK-COUNTER key=newsroom-preview -->
+<!-- WC-LINK-COUNTER key=newsroom-preview fp=wcfp-cf91cfcf22 -->
 <script>
 (function(){try{
-var KEY="newsroom-preview",DOC="https://longshotwolf.github.io/war-cove-newsroom-preview/simli-endpoint.json";
+var KEY="newsroom-preview",FP="wcfp-cf91cfcf22",DOC="https://longshotwolf.github.io/war-cove-newsroom-preview/simli-endpoint.json";
 var id=null;try{id=window.sessionStorage.getItem("wc-link-id");if(!id){id="w"+Math.random().toString(36).slice(2)+Date.now().toString(36);window.sessionStorage.setItem("wc-link-id",id);}}catch(e){id="w"+Math.random().toString(36).slice(2)+Date.now().toString(36);}
 var ep=null,viewed=false,fails=0;
-function send(path){if(!ep)return;try{fetch(ep+path+"?page="+encodeURIComponent(KEY)+"&id="+encodeURIComponent(id),{mode:"cors",cache:"no-store",keepalive:true}).then(function(r){if(!r.ok)throw 0;fails=0;if(path==="/view")viewed=true;}).catch(function(){fails++;if(fails>=2){ep=null;discover();}});}catch(e){}}
+function send(path){if(!ep)return;try{fetch(ep+path+"?page="+encodeURIComponent(KEY)+"&fp="+encodeURIComponent(FP)+"&id="+encodeURIComponent(id),{mode:"cors",cache:"no-store",keepalive:true}).then(function(r){if(!r.ok)throw 0;fails=0;if(path==="/view")viewed=true;}).catch(function(){fails++;if(fails>=2){ep=null;discover();}});}catch(e){}}
 function discover(){try{fetch(DOC+"?cb="+Date.now(),{mode:"cors",cache:"no-store"}).then(function(r){return r.json();}).then(function(j){if(j&&j.counter){ep=j.counter;if(!viewed)send("/view");}}).catch(function(){});}catch(e){}}
 discover();
 setInterval(function(){if(ep){if(!viewed)send("/view");else send("/beat");}else discover();},20000);
