@@ -560,13 +560,18 @@ else window.addEventListener('load', deferRotation);
     feed into the same pump: the every-30-minute Litecoin read practice
     publishes each read to sheity-reads.json next to this page (latest +
     short history, with its Aria mp3 riding as base64 text, decoded here
-    into a blob before it plays). A new read rises her live Simli face
-    the same way a candle pop does — short session, closed right after.
-    The speech lane above is untouched. Budget: a read is ~63 s of Simli
-    time against the day's ~33 session-minutes, so once the day's minutes
-    are spent a read goes out in voice over her desk picture and the
-    status line says so plainly. If the minter lane is down, the face
-    cannot rise at all — voice over the desk picture, status says so.
+    into a blob before it plays). THE FACE RULE (Warlord order Nov 21,
+    2026): VOICE every 30 minutes, FACE only on a new six-hour candle.
+    The feed marks it — face=true only on the first 30-minute read of
+    a fresh 6H candle (4 a day: opens 00/06/12/18 UTC = 17:00/23:00/
+    05:00/11:00 MST). A voice-only read never opens a Simli session
+    and spends no Simli minutes. A face read rises her live Simli face
+    the same way a candle pop does — short session, closed right after
+    — while the day's minutes hold. The speech lane above is untouched.
+    Budget: a face read is ~73 s of Simli time, 4 a day ≈ 5 min/day,
+    ~146 min/month against Hobby's 1,000 — easily inside. If the
+    minter lane is down, the face cannot rise at all — voice over the
+    desk picture, status says so.
 
 SPEECH ROUTING — Calla's real Aria audio does double duty:
    the page plays the line's mp3 aloud (her voice, the one he
@@ -1030,6 +1035,14 @@ function scheduleDrain(){
 async function speakLine(item){
   presCaption.textContent = item.text;
   if (sessionOpen) setPill('reading');
+  /* Sheity's own reads say plainly which mode they used: a voice-only
+     30-minute read, or a live face read on a new six-hour candle. A
+     face read whose session failed to open keeps the pump's own error
+     status instead — never claim the face is up when it is not. */
+  if (item.sheityId) {
+    if (item.voiceOnly) setStatus("<b>Voice-only 30-minute read.</b> Her face rises only on a new six-hour candle.");
+    else if (sessionOpen) setStatus("<b>Live face read — new six-hour candle.</b> She is reading it with her face up.");
+  }
   let got = null;
   try {
     if (item.b64) {
@@ -1142,12 +1155,17 @@ async function speechPoll(){
 /* ---------- Sheity's 30-minute reads — the feed into the same pump ----------
    Polls sheity-reads.json next to this page (same origin, cache-busted).
    A read newer than one cadence (30 min) that this page has not seen yet
-   queues exactly like a candle pop: live Simli face if the day's minutes
-   hold, voice over her desk picture if they are spent, and the status
-   line says which. Reads older than one cadence are stale and never
-   read late. Seen ids persist in localStorage so a refresh never
-   re-reads the same read. The minter lane is the same one above — if
-   it is down, openSession() fails and the pump's own fallback reads
+   queues into the same pump. THE FACE RULE (Warlord order Nov 21, 2026):
+   VOICE every 30 minutes, FACE only on a new six-hour candle — the feed
+   marks it with face=true, only on the first 30-minute read of a fresh
+   6H candle. A voice-only read is queued voiceOnly, so the pump never
+   opens a Simli session for it and it spends no Simli minutes; a missing
+   face flag (older feed entries) counts as voice-only. A face read rises
+   her live Simli face while the day's minutes hold, and the status line
+   says which mode each read used. Reads older than one cadence are stale
+   and never read late. Seen ids persist in localStorage so a refresh
+   never re-reads the same read. The minter lane is the same one above —
+   if it is down, openSession() fails and the pump's own fallback reads
    the read in voice over her desk picture. */
 let sheityFeedSeen = new Set(), sheityFeedTimer = null;
 try {
@@ -1174,13 +1192,24 @@ async function sheityFeedPoll(){
     sheityFeedSeen.add(rd.id); sheitySeenSave();
     if (queue.some(q => q.sheityId === rd.id)) continue;
     if (rd.at_ms && Date.now() - rd.at_ms > 30 * 60 * 1000) continue; // stale — never read late
-    budgetRoll();
-    if (budget.daySeconds >= DAY_BUDGET_S) {
-      ledgerPost({ kind: "skip", id: rd.id, at: Date.now(), reason: "sheity-read-budget-spent", priority: 2, text: rd.text });
+    /* THE FACE RULE: voice every 30 minutes, face ONLY on a new
+       six-hour candle. face=true only on the first 30-minute read
+       of a fresh 6H candle. A voice-only read never opens a Simli
+       session and spends no Simli minutes — queued voiceOnly, so
+       the pump never calls openSession() for it. A missing face
+       flag (older feed entries) counts as voice-only. */
+    if (rd.face !== true) {
+      ledgerPost({ kind: "voice", id: rd.id, at: Date.now(), reason: "sheity-30min-voice-only", priority: 2, text: rd.text });
       queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id, voiceOnly: true });
       continue;
     }
-    ledgerPost({ kind: "rise", id: rd.id, at: Date.now(), priority: 1, why: "sheity-30min-read", text: rd.text });
+    budgetRoll();
+    if (budget.daySeconds >= DAY_BUDGET_S) {
+      ledgerPost({ kind: "skip", id: rd.id, at: Date.now(), reason: "sheity-6h-face-budget-spent", priority: 1, text: rd.text });
+      queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id, voiceOnly: true });
+      continue;
+    }
+    ledgerPost({ kind: "rise", id: rd.id, at: Date.now(), priority: 1, why: "sheity-6h-face-read", text: rd.text });
     queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id });
   }
   if (queue.length) pump();
