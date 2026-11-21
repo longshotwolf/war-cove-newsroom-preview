@@ -556,7 +556,19 @@ else window.addEventListener('load', deferRotation);
    page. Only the token crosses; the key never leaves the
    connector.
 
-   SPEECH ROUTING — Calla's real Aria audio does double duty:
+       SHEITY'S 30-MINUTE READS (Warlord order Nov 21, 2026) — a second
+    feed into the same pump: the every-30-minute Litecoin read practice
+    publishes each read to sheity-reads.json next to this page (latest +
+    short history, with its Aria mp3 riding as base64 text, decoded here
+    into a blob before it plays). A new read rises her live Simli face
+    the same way a candle pop does — short session, closed right after.
+    The speech lane above is untouched. Budget: a read is ~63 s of Simli
+    time against the day's ~33 session-minutes, so once the day's minutes
+    are spent a read goes out in voice over her desk picture and the
+    status line says so plainly. If the minter lane is down, the face
+    cannot rise at all — voice over the desk picture, status says so.
+
+SPEECH ROUTING — Calla's real Aria audio does double duty:
    the page plays the line's mp3 aloud (her voice, the one he
    hears) and streams the same audio, decoded to PCM16 16 kHz,
    into the Simli session in real-time 100 ms chunks (the Day
@@ -1019,8 +1031,26 @@ async function speakLine(item){
   presCaption.textContent = item.text;
   if (sessionOpen) setPill('reading');
   let got = null;
-  try { got = await lineAudio(item.file); } catch (e) { got = null; }
-  if (!got) { presCaption.textContent = ""; return; } // the line's audio didn't land — skipped, never invented
+  try {
+    if (item.b64) {
+      /* Sheity's 30-minute read: audio rides as base64 text in the repo
+         (GitHub Pages holds text files) — decode it into an mp3 blob. */
+      const b64 = await (await fetch(item.b64 + "?cb=" + Date.now())).text();
+      const bin = atob(b64.replace(/\s/g, ""));
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const srcUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
+      got = await lineAudio(srcUrl);
+      URL.revokeObjectURL(srcUrl);
+    } else if (item.file) {
+      got = await lineAudio(item.file);
+    }
+  } catch (e) { got = null; }
+  if (!got) {
+    presCaption.textContent = "";
+    if (item.sheityId) setStatus("<b>Her 30-minute read's audio didn't land — skipped, never invented.</b> She stays at her desk until the next read.");
+    return;
+  } // the line's audio didn't land — skipped, never invented
   const fed = sessionOpen ? feedPCM(got.pcm) : Promise.resolve();
   await Promise.all([fed, playVoice(got.blobUrl)]);
   URL.revokeObjectURL(got.blobUrl);
@@ -1032,7 +1062,7 @@ async function pump(){
   while (armed && queue.length) {
     const item = queue[0];
     if (item.exp && Date.now() > item.exp) { queue.shift(); continue; }
-    if (!sessionOpen && !voiceOnly) {
+    if (!sessionOpen && !voiceOnly && !item.voiceOnly) {
       const res = await openSession();
       if (!res.ok && !res.busy) {
         voiceOnly = true;
@@ -1109,6 +1139,53 @@ async function speechPoll(){
   } finally { polling = false; lastPollDone = Date.now(); }
 }
 
+/* ---------- Sheity's 30-minute reads — the feed into the same pump ----------
+   Polls sheity-reads.json next to this page (same origin, cache-busted).
+   A read newer than one cadence (30 min) that this page has not seen yet
+   queues exactly like a candle pop: live Simli face if the day's minutes
+   hold, voice over her desk picture if they are spent, and the status
+   line says which. Reads older than one cadence are stale and never
+   read late. Seen ids persist in localStorage so a refresh never
+   re-reads the same read. The minter lane is the same one above — if
+   it is down, openSession() fails and the pump's own fallback reads
+   the read in voice over her desk picture. */
+let sheityFeedSeen = new Set(), sheityFeedTimer = null;
+try {
+  const seen = JSON.parse(localStorage.getItem("sheity-reads-seen-v1") || "[]");
+  if (Array.isArray(seen)) for (const id of seen.slice(-50)) sheityFeedSeen.add(id);
+} catch (e) {}
+function sheitySeenSave(){
+  try { localStorage.setItem("sheity-reads-seen-v1", JSON.stringify(Array.from(sheityFeedSeen).slice(-50))); } catch (e) {}
+}
+async function sheityFeedPoll(){
+  if (!armed) return;
+  let j = null;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch("sheity-reads.json?cb=" + Date.now(), { signal: ctl.signal });
+    clearTimeout(t);
+    if (!r.ok) return; // feed not published yet — nothing to read, no noise
+    j = await r.json();
+  } catch (e) { return; }
+  const reads = (j && j.reads) || (j && j.latest ? [j.latest] : []);
+  for (const rd of reads) {
+    if (!rd || !rd.id || sheityFeedSeen.has(rd.id)) continue;
+    sheityFeedSeen.add(rd.id); sheitySeenSave();
+    if (queue.some(q => q.sheityId === rd.id)) continue;
+    if (rd.at_ms && Date.now() - rd.at_ms > 30 * 60 * 1000) continue; // stale — never read late
+    budgetRoll();
+    if (budget.daySeconds >= DAY_BUDGET_S) {
+      ledgerPost({ kind: "skip", id: rd.id, at: Date.now(), reason: "sheity-read-budget-spent", priority: 2, text: rd.text });
+      queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id, voiceOnly: true });
+      continue;
+    }
+    ledgerPost({ kind: "rise", id: rd.id, at: Date.now(), priority: 1, why: "sheity-30min-read", text: rd.text });
+    queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id });
+  }
+  if (queue.length) pump();
+}
+
 /* ---------- arm / disarm — sessions only on his explicit action ---------- */
 let pollTimer = null, laneTimer = null, speechLaneTimer = null, wakeTimer = null;
 presArm.addEventListener('click', async () => {
@@ -1139,6 +1216,8 @@ presArm.addEventListener('click', async () => {
   laneTimer = setInterval(discoverSimliLane, 30000);
   speechPoll();
   pollTimer = setInterval(speechPoll, 5000);
+  sheityFeedPoll();
+  sheityFeedTimer = setInterval(sheityFeedPoll, 5000);
   /* OBS throttles a hidden source's timers hard. This 1 s ticker
      cannot beat the throttle either, but the moment any timer is
      allowed to run again it forces the poll the 5 s cadence would
@@ -1146,11 +1225,12 @@ presArm.addEventListener('click', async () => {
      lines it finds are the current candle's, still speakable. */
   wakeTimer = setInterval(() => { if (armed && Date.now() - lastPollDone > 7000) speechPoll(); }, 1000);
 });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && armed) speechPoll(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && armed) { speechPoll(); sheityFeedPoll(); } });
 presStop.addEventListener('click', () => {
   armed = false;
   queue.length = 0;
   if (pollTimer != null) { clearInterval(pollTimer); pollTimer = null; }
+  if (sheityFeedTimer != null) { clearInterval(sheityFeedTimer); sheityFeedTimer = null; }
   if (laneTimer != null) { clearInterval(laneTimer); laneTimer = null; }
   if (speechLaneTimer != null) { clearInterval(speechLaneTimer); speechLaneTimer = null; }
   if (wakeTimer != null) { clearInterval(wakeTimer); wakeTimer = null; }
