@@ -1,19 +1,19 @@
 {
   "feed": "sheity-reads",
   "latest": {
-    "id": "2026-11-21-1544",
-    "at": "2026-11-21 15:44 MST",
-    "at_ms": 1795301040000,
-    "feed_at": "2026-11-21 15:42 MST",
-    "text": "Litecoin read, three forty-four in the afternoon. Price is thirty-nine dollars sixty-eight cents. PVC, price versus the six-hour candle, is minus sixteen cents. Red Army, dead quiet, under the thirty-cent cycle line. The six-hour candle opened at eleven this morning at forty dollars eleven, high forty eighteen, low thirty-nine fifty-nine, and price sits below the candle's midpoint, so Red holds the six-hour. The one-hour pulse agrees, Red, price below its midpoint too. On the three-minute, Red Army pushing. The last closed three-minute candle made fresh ground down, low thirty-nine sixty-three, and the push is small, sixty-five cents from the forty twenty-eight high, well under the one-dollar big-move line. Temps: the six-hour and four-hour bottom sits at thirty-nine fifty-nine, nine cents under price. Close, but not lit, and the three-minute is pushing down, not up off the level. No clean best trade. Long the bottom needs price on the level with green pushing up. Not there. Short the top needs price on a top. Not there. Conclusion: wait. Watch next whether the three-minute breaks the thirty-nine fifty-nine low, or turns green off the bottom. Study only, nothing placed.",
-    "audio": "sheity-reads/2026-11-21-1544.mp3.b64",
+    "id": "2026-11-21-1614",
+    "at": "2026-11-21 16:14 MST",
+    "at_ms": 1795302840000,
+    "feed_at": "2026-11-21 16:13 MST",
+    "text": "Litecoin read, four fourteen in the afternoon. Price is thirty-nine dollars seventy-four cents. PVC, price versus the six-hour candle, is minus thirteen cents. Red Army, dead quiet, under the thirty-cent cycle line. The six-hour candle opened at eleven this morning at thirty-nine forty-five, high forty eighteen, low thirty-nine forty-five, and price sits below the candle's midpoint, so Red holds the six-hour. The one-hour pulse is flat, price dead on its midpoint. On the three-minute, Green Army slowing. The candles are getting littler, and live price is one cent under the last three candles' high of thirty-nine seventy-five, so no fresh ground. The red push from earlier has stalled at the thirty-nine fifty-five low, and the bounce is weak, capped at thirty-nine seventy-five. Temps: no light lit. The nearest levels are the four-hour bottom at thirty-nine fifty-five and the one-hour top at thirty-nine ninety-three, both about nineteen cents away. No clean best trade. Long the bottom needs price on the level with green pushing up. Not there. Short the top needs price on a top. Not there. Conclusion: wait. Watch next whether the three-minute breaks above thirty-nine seventy-five and reclaims the one-hour top, or fails there and falls back through thirty-nine fifty-five. Study only, nothing placed.",
+    "audio": "sheity-reads/2026-11-21-1614.mp3.b64",
     "audio_format": "mp3-base64",
-    "audio_seconds": 80,
-    "price": 39.68,
-    "pvc": "-$0.16 Red, dead quiet (Sable 6H, Bitunix lane; series lane $0.00)",
+    "audio_seconds": 94,
+    "price": 39.74,
+    "pvc": "-$0.13 Red, dead quiet (Sable 6H, Bitunix lane; series lane -$0.13)",
     "army": "RED",
-    "three_minute": "RED ARMY PUSHING — fresh ground down to $39.63 (last closed 3M 22:39 UTC), fall from $40.28 top $0.65, no big move",
-    "temps": "6H/4H top $40.18; 6H/4H bottom $39.59 (9¢ under price, not lit); 1H top $40.00; DAY top $40.77; DAY/WEEK/MONTH bottom $37.41; no light lit",
+    "three_minute": "GREEN ARMY SLOWING — littler (last closed sizes 0.13/0.12/0.086, forming 0.04), no fresh ground, live 1¢ under prev-3 high $39.75; red push stalled at $39.55, bounce capped at $39.75",
+    "temps": "6H top $40.18; 6H bottom $39.45; 4H top $40.18; 4H bottom $39.55 (19¢ below price); 1H top $39.93 (19¢ above); 1H bottom $39.55; DAY top $42.60; DAY/WEEK/MONTH bottom $37.41; no light lit",
     "conclusion": "WAIT",
     "best_trade": "none",
     "voice": "Aria",
@@ -21,6 +21,25 @@
   },
   "note": "Sheity's every-30-minute Litecoin candle reads, study only, never a trade. Latest first. Audio rides as base64 text (sheity-reads/<id>.mp3.b64) because GitHub Pages holds text files; the chair page decodes it into an mp3 blob before it plays and feeds it to her Simli face.",
   "reads": [
+    {
+      "id": "2026-11-21-1614",
+      "at": "2026-11-21 16:14 MST",
+      "at_ms": 1795302840000,
+      "feed_at": "2026-11-21 16:13 MST",
+      "text": "Litecoin read, four fourteen in the afternoon. Price is thirty-nine dollars seventy-four cents. PVC, price versus the six-hour candle, is minus thirteen cents. Red Army, dead quiet, under the thirty-cent cycle line. The six-hour candle opened at eleven this morning at thirty-nine forty-five, high forty eighteen, low thirty-nine forty-five, and price sits below the candle's midpoint, so Red holds the six-hour. The one-hour pulse is flat, price dead on its midpoint. On the three-minute, Green Army slowing. The candles are getting littler, and live price is one cent under the last three candles' high of thirty-nine seventy-five, so no fresh ground. The red push from earlier has stalled at the thirty-nine fifty-five low, and the bounce is weak, capped at thirty-nine seventy-five. Temps: no light lit. The nearest levels are the four-hour bottom at thirty-nine fifty-five and the one-hour top at thirty-nine ninety-three, both about nineteen cents away. No clean best trade. Long the bottom needs price on the level with green pushing up. Not there. Short the top needs price on a top. Not there. Conclusion: wait. Watch next whether the three-minute breaks above thirty-nine seventy-five and reclaims the one-hour top, or fails there and falls back through thirty-nine fifty-five. Study only, nothing placed.",
+      "audio": "sheity-reads/2026-11-21-1614.mp3.b64",
+      "audio_format": "mp3-base64",
+      "audio_seconds": 94,
+      "price": 39.74,
+      "pvc": "-$0.13 Red, dead quiet (Sable 6H, Bitunix lane; series lane -$0.13)",
+      "army": "RED",
+      "three_minute": "GREEN ARMY SLOWING — littler (last closed sizes 0.13/0.12/0.086, forming 0.04), no fresh ground, live 1¢ under prev-3 high $39.75; red push stalled at $39.55, bounce capped at $39.75",
+      "temps": "6H top $40.18; 6H bottom $39.45; 4H top $40.18; 4H bottom $39.55 (19¢ below price); 1H top $39.93 (19¢ above); 1H bottom $39.55; DAY top $42.60; DAY/WEEK/MONTH bottom $37.41; no light lit",
+      "conclusion": "WAIT",
+      "best_trade": "none",
+      "voice": "Aria",
+      "face": false
+    },
     {
       "id": "2026-11-21-1544",
       "at": "2026-11-21 15:44 MST",
@@ -78,5 +97,5 @@
       "voice": "Aria"
     }
   ],
-  "updated": "2026-11-21 15:47 MST"
+  "updated": "2026-11-21 16:14 MST"
 }
