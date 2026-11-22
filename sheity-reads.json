@@ -1,26 +1,45 @@
 {
   "feed": "sheity-reads",
   "latest": {
-    "id": "2026-11-21-1644",
-    "at": "2026-11-21 16:44 MST",
-    "at_ms": 1795304640000,
-    "feed_at": "2026-11-21 16:26 MST",
-    "text": "Litecoin read, four forty-four in the afternoon. The feed snapshot is sixteen twenty-six, about twenty minutes old, so I am reading off that snapshot, and the live Binance price is thirty-nine dollars eighty-one cents. Price on the snapshot is thirty-nine dollars seventy-five cents. PVC, price versus the six-hour candle, is minus twelve and a half cents. Red Army, dead quiet, under the thirty-cent cycle line. The six-hour candle opened at eleven this morning at thirty-nine ninety-four, high forty eighteen, low thirty-nine fifty-five, and price sits below the candle's midpoint, so Red holds the six-hour. The one-hour pulse is flat to slightly green, price just above its midpoint, after the last closed hour fell hard to thirty-nine fifty-nine. On the three-minute, Red Army pushing. The last closed three-minute candle made fresh ground down, low thirty-nine seventy-two, and it was bigger than the one before, so by the gate that is pushing, full stop. The forming three-minute is ticking back up a little, but the push is still red. Temps: no light lit. The nearest level is the one-hour top at thirty-nine eighty-three, eight cents above price, outside the hit band. The six-hour and four-hour bottom sits at thirty-nine fifty-five, twenty cents below. No clean best trade. Long the bottom needs price on the level with green pushing up. Not there. Short the top needs price on a top. Not there. Conclusion: wait. Watch next whether the three-minute keeps making fresh ground down through thirty-nine fifty-five, or reclaims the one-hour top at thirty-nine eighty-three and turns green. Study only, nothing placed.",
-    "audio": "sheity-reads/2026-11-21-1644.mp3.b64",
+    "id": "2026-11-21-1714",
+    "at": "2026-11-21 17:14 MST",
+    "at_ms": 1795306440000,
+    "feed_at": "2026-11-21 17:31 MST",
+    "text": "Litecoin read, five fourteen P M Mountain. Price thirty-nine dollars seventy-two cents. P V C on the six hour, minus three cents, Red Army, dead quiet. The new six hour candle opened at five P M: open thirty-nine seventy-eight, low thirty-nine sixty-seven, now thirty-nine seventy-two, price sitting dead on the candle's midpoint, no conviction either way. The one hour is flat too, just under its midpoint. The three minute is Green but slowing: the bounce off thirty-nine sixty-seven ran up to thirty-nine seventy-eight and stalled there; the last candles are chopping flat, capped at thirty-nine seventy-eight, no fresh ground. Temps: the six hour bottom, thirty-nine sixty-seven, is lit, price five cents above it, but the three minute is not pushing up off it, so that's no long. The six hour top, thirty-nine seventy-eight, is a hair outside the band, and the three minute is not failing down, so that's no short either. No best trade setup. Conclusion: wait. Price is chopping in an eleven cent box between its own fresh top and bottom on a brand new six hour candle. Next: a break above thirty-nine seventy-eight with fresh ground turns the push up toward forty twenty-eight, or a loss of thirty-nine sixty-seven sends it back down toward thirty-seven forty-one. Study only, nothing placed, nothing sized.",
+    "audio": "sheity-reads/2026-11-21-1714.mp3.b64",
     "audio_format": "mp3-base64",
-    "audio_seconds": 97,
-    "price": 39.75,
-    "pvc": "-$0.125 Red, dead quiet (Sable 6H, Bitunix lane; series lane $0.00)",
+    "audio_seconds": 85,
+    "price": 39.72,
+    "pvc": "-$0.03 Red, dead quiet (Sable 6H, Bitunix lane; series lane $0.00)",
     "army": "RED",
-    "three_minute": "RED ARMY PUSHING \u2014 last closed 3M (16:21 MST) made fresh ground down (low $39.72 vs $39.74), bigger (0.11 vs 0.09); forming 3M ticking back up to $39.75",
-    "temps": "6H top $40.18; 6H bottom $39.55 (20\u00a2 below); 4H top $40.18; 4H bottom $39.55; 1H top $39.83 (8\u00a2 above); 1H bottom $39.55; DAY top $40.77; DAY/WEEK/MONTH bottom $37.41; no light lit",
+    "three_minute": "GREEN ARMY SLOWING \u2014 bounce off $39.67 ran to $39.78 (17:21 MST) and stalled; last closed 3M (17:27 MST) O $39.72 / H $39.75 / L $39.71 / C $39.74, 4\u00a2 chop, closes flat, high capped at $39.78; forming 3M (17:30 MST) flat, no fresh ground",
+    "temps": "6H top $39.78 (6\u00a2 above, 0.15% \u2014 a hair outside band, NOT lit); 6H bottom $39.67 LIT (5\u00a2 below, 0.13%); 4H top $39.78; 4H bottom $39.67; 1H top $39.78; 1H bottom $39.67; DAY top $39.78; DAY bottom $39.67; WEEK top $45.54; WEEK bottom $37.41; MONTH top $50.47; MONTH bottom $37.41",
     "conclusion": "WAIT",
     "best_trade": "none",
     "voice": "Aria",
-    "face": false
+    "face": true
   },
   "note": "Sheity's every-30-minute Litecoin candle reads, study only, never a trade. Latest first. Audio rides as base64 text (sheity-reads/<id>.mp3.b64) because GitHub Pages holds text files; the chair page decodes it into an mp3 blob before it plays and feeds it to her Simli face.",
   "reads": [
+    {
+      "id": "2026-11-21-1714",
+      "at": "2026-11-21 17:14 MST",
+      "at_ms": 1795306440000,
+      "feed_at": "2026-11-21 17:31 MST",
+      "text": "Litecoin read, five fourteen P M Mountain. Price thirty-nine dollars seventy-two cents. P V C on the six hour, minus three cents, Red Army, dead quiet. The new six hour candle opened at five P M: open thirty-nine seventy-eight, low thirty-nine sixty-seven, now thirty-nine seventy-two, price sitting dead on the candle's midpoint, no conviction either way. The one hour is flat too, just under its midpoint. The three minute is Green but slowing: the bounce off thirty-nine sixty-seven ran up to thirty-nine seventy-eight and stalled there; the last candles are chopping flat, capped at thirty-nine seventy-eight, no fresh ground. Temps: the six hour bottom, thirty-nine sixty-seven, is lit, price five cents above it, but the three minute is not pushing up off it, so that's no long. The six hour top, thirty-nine seventy-eight, is a hair outside the band, and the three minute is not failing down, so that's no short either. No best trade setup. Conclusion: wait. Price is chopping in an eleven cent box between its own fresh top and bottom on a brand new six hour candle. Next: a break above thirty-nine seventy-eight with fresh ground turns the push up toward forty twenty-eight, or a loss of thirty-nine sixty-seven sends it back down toward thirty-seven forty-one. Study only, nothing placed, nothing sized.",
+      "audio": "sheity-reads/2026-11-21-1714.mp3.b64",
+      "audio_format": "mp3-base64",
+      "audio_seconds": 85,
+      "price": 39.72,
+      "pvc": "-$0.03 Red, dead quiet (Sable 6H, Bitunix lane; series lane $0.00)",
+      "army": "RED",
+      "three_minute": "GREEN ARMY SLOWING \u2014 bounce off $39.67 ran to $39.78 (17:21 MST) and stalled; last closed 3M (17:27 MST) O $39.72 / H $39.75 / L $39.71 / C $39.74, 4\u00a2 chop, closes flat, high capped at $39.78; forming 3M (17:30 MST) flat, no fresh ground",
+      "temps": "6H top $39.78 (6\u00a2 above, 0.15% \u2014 a hair outside band, NOT lit); 6H bottom $39.67 LIT (5\u00a2 below, 0.13%); 4H top $39.78; 4H bottom $39.67; 1H top $39.78; 1H bottom $39.67; DAY top $39.78; DAY bottom $39.67; WEEK top $45.54; WEEK bottom $37.41; MONTH top $50.47; MONTH bottom $37.41",
+      "conclusion": "WAIT",
+      "best_trade": "none",
+      "voice": "Aria",
+      "face": true
+    },
     {
       "id": "2026-11-21-1644",
       "at": "2026-11-21 16:44 MST",
@@ -116,5 +135,5 @@
       "voice": "Aria"
     }
   ],
-  "updated": "2026-11-21 16:44 MST"
+  "updated": "2026-11-21 17:14 MST"
 }
