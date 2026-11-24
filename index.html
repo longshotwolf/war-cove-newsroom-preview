@@ -548,6 +548,22 @@ else window.addEventListener('load', deferRotation);
    reason, and the delivery-QC watch reads that ledger — a
    policy skip judges BY POLICY there, never as a missed rise.
 
+   SUPERSEDED — SURVEY-ONLY (the Warlord's ruling, Nov 23, 2026
+   ~8:44 PM MST): "Take off the every call and just let her do
+   her one call when she read survey — just have her when I ask
+   her to survey the field, she pop up to survey the field.
+   Make Calla back reading all the calls." She does NOT rise
+   for the automatic calls any more — not the hourly line, not
+   temp hits, not big-move 3M, not drill-downs. Calla reads
+   those again. She rises for ONE thing: a survey the Warlord
+   asked for. Survey lines reach this widget through the live
+   queue tagged by her speaker (room "survey" / the survey
+   stamp — the speaker fires the standing survey read-down
+   into the queue only when a survey request lands from the
+   Warlord). A survey always rises, never budget-blocked;
+   every other line is a desk line, skipped BY POLICY with
+   the reason "survey-only-standing-order" in the ledger.
+
    THE TOKEN IS MINTED SERVER-SIDE. This page is static and
    holds no key: a house minter (simli-lane/simli_minter.py —
    the Day Brief's own mint pattern) hands it ONE short-lived
@@ -556,24 +572,7 @@ else window.addEventListener('load', deferRotation);
    page. Only the token crosses; the key never leaves the
    connector.
 
-       SHEITY'S 30-MINUTE READS (Warlord order Nov 21, 2026) — a second
-    feed into the same pump: the every-30-minute Litecoin read practice
-    publishes each read to sheity-reads.json next to this page (latest +
-    short history, with its Aria mp3 riding as base64 text, decoded here
-    into a blob before it plays). THE FACE RULE (Warlord order Nov 21,
-    2026): VOICE every 30 minutes, FACE only on a new six-hour candle.
-    The feed marks it — face=true only on the first 30-minute read of
-    a fresh 6H candle (4 a day: opens 00/06/12/18 UTC = 17:00/23:00/
-    05:00/11:00 MST). A voice-only read never opens a Simli session
-    and spends no Simli minutes. A face read rises her live Simli face
-    the same way a candle pop does — short session, closed right after
-    — while the day's minutes hold. The speech lane above is untouched.
-    Budget: a face read is ~73 s of Simli time, 4 a day ≈ 5 min/day,
-    ~146 min/month against Hobby's 1,000 — easily inside. If the
-    minter lane is down, the face cannot rise at all — voice over the
-    desk picture, status says so.
-
-SPEECH ROUTING — Calla's real Aria audio does double duty:
+   SPEECH ROUTING — Calla's real Aria audio does double duty:
    the page plays the line's mp3 aloud (her voice, the one he
    hears) and streams the same audio, decoded to PCM16 16 kHz,
    into the Simli session in real-time 100 ms chunks (the Day
@@ -863,29 +862,16 @@ function ledgerFlush(){
     ledgerFlushing = false;
   })();
 }
-/* The classification reads the line's own stamps first (the
-   office that made it, its frame) and its words second — the
-   offices' wording carries their calls: a temp HIT speaks its
-   oath ("Long the bottom, short the top." / "Short the top.
-   Long the bottom."), a standing level only "stands at", and
-   Sierra's big move says "big move" (her locked tiers). */
+/* The classification is the Warlord's survey-only ruling
+   (Nov 23, 2026 ~8:44 PM MST — see the header): a line tagged
+   as a survey by her speaker rises, always; every automatic
+   call is a desk line now. Calla reads the calls. */
 function policyVerdict(it){
-  const text = it.text || "";
-  const frame = String(it.frame || "").toUpperCase();
   const room = String(it.room || "").toLowerCase();
-  if (frame === "1H" || room === "hera" || /\bOne hour\./.test(text))
-    return { p: 1, why: "1H — beginning of the hour" };
-  const is3M = frame === "3M" || room === "sierra" || /\bThree minute\./.test(text);
-  if (is3M && /big move/i.test(text))
-    return { p: 2, why: "big-move 3M" };
-  const tempHit = room === "terra" || room === "vega" ||
-    /\. Temp (top|bottom) on the/.test(text) ||
-    /Long the bottom, short the top\.|Short the top\. Long the bottom\./.test(text);
-  if (tempHit && !/stands at/.test(text))
-    return { p: 2, why: "temp hit" };
-  if (/stands at/.test(text)) return { p: 0, reason: "standing-temp-level" };
-  if (is3M) return { p: 0, reason: "ordinary-3m" };
-  return { p: 0, reason: "other-office-line" };
+  const frame = String(it.frame || "").toUpperCase();
+  if (it.survey === true || room === "survey" || frame === "SURVEY")
+    return { p: 1, why: "survey — the Warlord asked" };
+  return { p: 0, reason: "survey-only-standing-order" };
 }
 
 /* ---------- the live session (Day Brief's two-line pattern) ---------- */
@@ -1035,35 +1021,9 @@ function scheduleDrain(){
 async function speakLine(item){
   presCaption.textContent = item.text;
   if (sessionOpen) setPill('reading');
-  /* Sheity's own reads say plainly which mode they used: a voice-only
-     30-minute read, or a live face read on a new six-hour candle. A
-     face read whose session failed to open keeps the pump's own error
-     status instead — never claim the face is up when it is not. */
-  if (item.sheityId) {
-    if (item.voiceOnly) setStatus("<b>Voice-only 30-minute read.</b> Her face rises only on a new six-hour candle.");
-    else if (sessionOpen) setStatus("<b>Live face read — new six-hour candle.</b> She is reading it with her face up.");
-  }
   let got = null;
-  try {
-    if (item.b64) {
-      /* Sheity's 30-minute read: audio rides as base64 text in the repo
-         (GitHub Pages holds text files) — decode it into an mp3 blob. */
-      const b64 = await (await fetch(item.b64 + "?cb=" + Date.now())).text();
-      const bin = atob(b64.replace(/\s/g, ""));
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const srcUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
-      got = await lineAudio(srcUrl);
-      URL.revokeObjectURL(srcUrl);
-    } else if (item.file) {
-      got = await lineAudio(item.file);
-    }
-  } catch (e) { got = null; }
-  if (!got) {
-    presCaption.textContent = "";
-    if (item.sheityId) setStatus("<b>Her 30-minute read's audio didn't land — skipped, never invented.</b> She stays at her desk until the next read.");
-    return;
-  } // the line's audio didn't land — skipped, never invented
+  try { got = await lineAudio(item.file); } catch (e) { got = null; }
+  if (!got) { presCaption.textContent = ""; return; } // the line's audio didn't land — skipped, never invented
   const fed = sessionOpen ? feedPCM(got.pcm) : Promise.resolve();
   await Promise.all([fed, playVoice(got.blobUrl)]);
   URL.revokeObjectURL(got.blobUrl);
@@ -1075,7 +1035,7 @@ async function pump(){
   while (armed && queue.length) {
     const item = queue[0];
     if (item.exp && Date.now() > item.exp) { queue.shift(); continue; }
-    if (!sessionOpen && !voiceOnly && !item.voiceOnly) {
+    if (!sessionOpen && !voiceOnly) {
       const res = await openSession();
       if (!res.ok && !res.busy) {
         voiceOnly = true;
@@ -1127,12 +1087,12 @@ async function speechPoll(){
       else if (Date.now() - (it.at || 0) > 600000) continue;
       if (batchTexts.has(it.text) || queue.some(q => q.text === it.text)) continue; // the lane sometimes writes one line twice — she says it once
       batchTexts.add(it.text);
-      /* THE RISE POLICY (the policy block above): P1 always
-         rises; P2 rises while the day's session-minutes hold;
-         everything else is a desk line — skipped BY POLICY and
-         written to the ledger with its reason, so the
-         delivery-QC watch judges it BY POLICY, never as a
-         missed rise. */
+      /* THE RISE POLICY (the policy block above — survey-only
+         since the Warlord's Nov 23, 2026 ruling): a survey line
+         always rises; every automatic call is a desk line —
+         skipped BY POLICY and written to the ledger with its
+         reason, so the delivery-QC watch judges it BY POLICY,
+         never as a missed rise. */
       const verdict = policyVerdict(it);
       if (verdict.p === 0) {
         ledgerPost({ kind: "skip", id, at: Date.now(), reason: verdict.reason, priority: 0, text: it.text });
@@ -1150,69 +1110,6 @@ async function speechPoll(){
     }
     if (queue.length) pump();
   } finally { polling = false; lastPollDone = Date.now(); }
-}
-
-/* ---------- Sheity's 30-minute reads — the feed into the same pump ----------
-   Polls sheity-reads.json next to this page (same origin, cache-busted).
-   A read newer than one cadence (30 min) that this page has not seen yet
-   queues into the same pump. THE FACE RULE (Warlord order Nov 21, 2026):
-   VOICE every 30 minutes, FACE only on a new six-hour candle — the feed
-   marks it with face=true, only on the first 30-minute read of a fresh
-   6H candle. A voice-only read is queued voiceOnly, so the pump never
-   opens a Simli session for it and it spends no Simli minutes; a missing
-   face flag (older feed entries) counts as voice-only. A face read rises
-   her live Simli face while the day's minutes hold, and the status line
-   says which mode each read used. Reads older than one cadence are stale
-   and never read late. Seen ids persist in localStorage so a refresh
-   never re-reads the same read. The minter lane is the same one above —
-   if it is down, openSession() fails and the pump's own fallback reads
-   the read in voice over her desk picture. */
-let sheityFeedSeen = new Set(), sheityFeedTimer = null;
-try {
-  const seen = JSON.parse(localStorage.getItem("sheity-reads-seen-v1") || "[]");
-  if (Array.isArray(seen)) for (const id of seen.slice(-50)) sheityFeedSeen.add(id);
-} catch (e) {}
-function sheitySeenSave(){
-  try { localStorage.setItem("sheity-reads-seen-v1", JSON.stringify(Array.from(sheityFeedSeen).slice(-50))); } catch (e) {}
-}
-async function sheityFeedPoll(){
-  if (!armed) return;
-  let j = null;
-  try {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 8000);
-    const r = await fetch("sheity-reads.json?cb=" + Date.now(), { signal: ctl.signal });
-    clearTimeout(t);
-    if (!r.ok) return; // feed not published yet — nothing to read, no noise
-    j = await r.json();
-  } catch (e) { return; }
-  const reads = (j && j.reads) || (j && j.latest ? [j.latest] : []);
-  for (const rd of reads) {
-    if (!rd || !rd.id || sheityFeedSeen.has(rd.id)) continue;
-    sheityFeedSeen.add(rd.id); sheitySeenSave();
-    if (queue.some(q => q.sheityId === rd.id)) continue;
-    if (rd.at_ms && Date.now() - rd.at_ms > 30 * 60 * 1000) continue; // stale — never read late
-    /* THE FACE RULE: voice every 30 minutes, face ONLY on a new
-       six-hour candle. face=true only on the first 30-minute read
-       of a fresh 6H candle. A voice-only read never opens a Simli
-       session and spends no Simli minutes — queued voiceOnly, so
-       the pump never calls openSession() for it. A missing face
-       flag (older feed entries) counts as voice-only. */
-    if (rd.face !== true) {
-      ledgerPost({ kind: "voice", id: rd.id, at: Date.now(), reason: "sheity-30min-voice-only", priority: 2, text: rd.text });
-      queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id, voiceOnly: true });
-      continue;
-    }
-    budgetRoll();
-    if (budget.daySeconds >= DAY_BUDGET_S) {
-      ledgerPost({ kind: "skip", id: rd.id, at: Date.now(), reason: "sheity-6h-face-budget-spent", priority: 1, text: rd.text });
-      queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id, voiceOnly: true });
-      continue;
-    }
-    ledgerPost({ kind: "rise", id: rd.id, at: Date.now(), priority: 1, why: "sheity-6h-face-read", text: rd.text });
-    queue.push({ file: null, b64: rd.audio || null, text: rd.text, exp: 0, sheityId: rd.id });
-  }
-  if (queue.length) pump();
 }
 
 /* ---------- arm / disarm — sessions only on his explicit action ---------- */
@@ -1245,8 +1142,6 @@ presArm.addEventListener('click', async () => {
   laneTimer = setInterval(discoverSimliLane, 30000);
   speechPoll();
   pollTimer = setInterval(speechPoll, 5000);
-  sheityFeedPoll();
-  sheityFeedTimer = setInterval(sheityFeedPoll, 5000);
   /* OBS throttles a hidden source's timers hard. This 1 s ticker
      cannot beat the throttle either, but the moment any timer is
      allowed to run again it forces the poll the 5 s cadence would
@@ -1254,12 +1149,11 @@ presArm.addEventListener('click', async () => {
      lines it finds are the current candle's, still speakable. */
   wakeTimer = setInterval(() => { if (armed && Date.now() - lastPollDone > 7000) speechPoll(); }, 1000);
 });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && armed) { speechPoll(); sheityFeedPoll(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && armed) speechPoll(); });
 presStop.addEventListener('click', () => {
   armed = false;
   queue.length = 0;
   if (pollTimer != null) { clearInterval(pollTimer); pollTimer = null; }
-  if (sheityFeedTimer != null) { clearInterval(sheityFeedTimer); sheityFeedTimer = null; }
   if (laneTimer != null) { clearInterval(laneTimer); laneTimer = null; }
   if (speechLaneTimer != null) { clearInterval(speechLaneTimer); speechLaneTimer = null; }
   if (wakeTimer != null) { clearInterval(wakeTimer); wakeTimer = null; }
