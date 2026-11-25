@@ -564,6 +564,17 @@ else window.addEventListener('load', deferRotation);
    every other line is a desk line, skipped BY POLICY with
    the reason "survey-only-standing-order" in the ledger.
 
+   THAT RULING IS ITSELF SUPERSEDED (the Warlord's reversal,
+   Nov 24, 2026 ~1:03 AM MST): "Since Callie keep fucking up,
+   take her off and put Sheity back on because Sheity get it
+   done" — Calla is OFF all calls, Sheity is back on reading
+   ALL the calls, and the survey-only arrangement is over.
+   The classification below is restored to the Nov 18 rise
+   policy (survey branch kept: a survey he asks for still
+   always rises). The survey-only build stood live ~16 hours
+   past the reversal and is the recorded cause of the Nov 24
+   missed rises; this note stays so the history is not lost.
+
    THE TOKEN IS MINTED SERVER-SIDE. This page is static and
    holds no key: a house minter (simli-lane/simli_minter.py —
    the Day Brief's own mint pattern) hands it ONE short-lived
@@ -862,16 +873,41 @@ function ledgerFlush(){
     ledgerFlushing = false;
   })();
 }
-/* The classification is the Warlord's survey-only ruling
-   (Nov 23, 2026 ~8:44 PM MST — see the header): a line tagged
-   as a survey by her speaker rises, always; every automatic
-   call is a desk line now. Calla reads the calls. */
+/* The classification reads the line's own stamps first (the
+   office that made it, its frame) and its words second — the
+   offices' wording carries their calls: a temp HIT speaks its
+   oath ("Long the bottom, short the top." / "Short the top.
+   Long the bottom."), a standing level only "stands at", and
+   Sierra's big move says "big move" (her locked tiers).
+   RESTORED Nov 24, 2026 (the Warlord's reversal ~1:03 AM MST
+   Nov 24 — "put Sheity back on because Sheity get it done;
+   Calla is OFF all calls, Sheity reads ALL the calls, the
+   survey-only arrangement is over" — and his direct fix order
+   ~7:36 PM MST Nov 24): the Nov 23 survey-only classification
+   below this note kept her from rising for a single automatic
+   line for ~16 hours (57+ flagged missed rises). The standing
+   policy is again the Nov 18 rise policy, with the survey
+   branch kept on top: a survey the Warlord asked for still
+   always rises, never budget-blocked. */
 function policyVerdict(it){
-  const room = String(it.room || "").toLowerCase();
+  const text = it.text || "";
   const frame = String(it.frame || "").toUpperCase();
+  const room = String(it.room || "").toLowerCase();
   if (it.survey === true || room === "survey" || frame === "SURVEY")
     return { p: 1, why: "survey — the Warlord asked" };
-  return { p: 0, reason: "survey-only-standing-order" };
+  if (frame === "1H" || room === "hera" || /\bOne hour\./.test(text))
+    return { p: 1, why: "1H — beginning of the hour" };
+  const is3M = frame === "3M" || room === "sierra" || /\bThree minute\./.test(text);
+  if (is3M && /big move/i.test(text))
+    return { p: 2, why: "big-move 3M" };
+  const tempHit = room === "terra" || room === "vega" ||
+    /\. Temp (top|bottom) on the/.test(text) ||
+    /Long the bottom, short the top\.|Short the top\. Long the bottom\./.test(text);
+  if (tempHit && !/stands at/.test(text))
+    return { p: 2, why: "temp hit" };
+  if (/stands at/.test(text)) return { p: 0, reason: "standing-temp-level" };
+  if (is3M) return { p: 0, reason: "ordinary-3m" };
+  return { p: 0, reason: "other-office-line" };
 }
 
 /* ---------- the live session (Day Brief's two-line pattern) ---------- */
@@ -1087,12 +1123,13 @@ async function speechPoll(){
       else if (Date.now() - (it.at || 0) > 600000) continue;
       if (batchTexts.has(it.text) || queue.some(q => q.text === it.text)) continue; // the lane sometimes writes one line twice — she says it once
       batchTexts.add(it.text);
-      /* THE RISE POLICY (the policy block above — survey-only
-         since the Warlord's Nov 23, 2026 ruling): a survey line
-         always rises; every automatic call is a desk line —
-         skipped BY POLICY and written to the ledger with its
-         reason, so the delivery-QC watch judges it BY POLICY,
-         never as a missed rise. */
+      /* THE RISE POLICY (the policy block above — restored
+         Nov 24, 2026 on the Warlord's reversal of the Nov 23
+         survey-only ruling): P1 always rises; P2 rises while
+         the day's session-minutes hold; everything else is a
+         desk line — skipped BY POLICY and written to the ledger
+         with its reason, so the delivery-QC watch judges it
+         BY POLICY, never as a missed rise. */
       const verdict = policyVerdict(it);
       if (verdict.p === 0) {
         ledgerPost({ kind: "skip", id, at: Date.now(), reason: verdict.reason, priority: 0, text: it.text });
