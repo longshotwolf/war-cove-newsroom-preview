@@ -575,6 +575,23 @@ else window.addEventListener('load', deferRotation);
    past the reversal and is the recorded cause of the Nov 24
    missed rises; this note stays so the history is not lost.
 
+   SELF-UPDATE (Nov 25, 2026 — the Warlord's order: "Fix it
+   give it a new code."): the served fix still had not reached
+   her chair a day later — her already-loaded page held the
+   survey-only code in memory and kept skipping rises (missed
+   rise #71: the LTC 1H line, 2:09:34 AM NYC Nov 25). A page
+   already open never re-reads its own code, so this build
+   carries a stamp (PRESENTER_BUILD, below) and, on the same
+   30 s cadence it re-discovers the token lane, fetches its own
+   served copy and compares stamps. On a genuine change — and
+   only while she is idle, never mid-read — it reloads itself
+   onto the new code, re-arming itself if it was armed, at most
+   once per publish per 10 minutes (the attempt guard rides
+   out the Pages propagation lag; there is no reload loop).
+   A fix that only lands on the server is not a fix until her
+   running page runs it — this makes the running page come and
+   get it, every publish, forever.
+
    THE TOKEN IS MINTED SERVER-SIDE. This page is static and
    holds no key: a house minter (simli-lane/simli_minter.py —
    the Day Brief's own mint pattern) hands it ONE short-lived
@@ -593,6 +610,17 @@ else window.addEventListener('load', deferRotation);
    desk picture — and the status line says so plain.        */
 
 const COMMENTARY = "https://longshotwolf.github.io/war-cove-candle-commentary/";
+/* PRESENTER BUILD — bump this string on EVERY edit of this page.
+   Her running page polls its own served copy on the lane-discovery
+   cadence and reloads itself onto the new build when the served
+   stamp differs (the self-update block by discoverSimliLane).
+   A publish that forgets the bump does not propagate — the bump
+   IS the publish bell. (Nov 25, 2026: the Nov 24 rise-policy fix
+   sat served for a day while her already-loaded page kept the
+   dead survey-only code in memory — 70+ missed rises. This stamp
+   is the cure: after ONE manual reload onto this build, no
+   future fix can ever wait on a reload again.) */
+const PRESENTER_BUILD = "20261125-1";
 const presFrame   = document.getElementById('presFrame');
 const presIdle    = document.getElementById('presIdle');
 const presFace    = document.getElementById('presFace');
@@ -729,6 +757,54 @@ async function discoverSimliLane(){
     const eps = (j && j.endpoints && j.endpoints.length) ? j.endpoints : (j && j.endpoint ? [j.endpoint] : []);
     if (eps.length) simliEndpoints = eps.map(u => String(u).replace(/\/+$/, ""));
   } catch (e) {}
+  checkPresenterBuild(); // the self-update check rides this cadence
+}
+/* ---------- self-update — the running page comes and gets new code ----------
+   (Nov 25, 2026; the header tells the story.) On the lane-discovery
+   cadence the page fetches its OWN served copy — the one document
+   that defines its code, on whichever origin served her: the minter
+   reads this folder fresh from disk on every request, and the Pages
+   copy is fetched with the same ?cb= cache-buster every other lane
+   here uses — and compares the PRESENTER_BUILD stamp it finds with
+   the stamp it is running. A genuine difference, while she is idle
+   (never mid-read, never with a session open or a line queued),
+   reloads her onto the new code through a ?pb= address — a fresh
+   cache key, so even a caching Pages edge hands her the new file.
+   The attempt is stamped in sessionStorage: at most one reload per
+   publish per 10 minutes, which rides out the Pages propagation
+   lag without ever looping. If she was armed, a flag rides the
+   reload and the boot code below re-arms her, so an update never
+   leaves her chair dark. Any doubt — a failed fetch, a missing
+   stamp — and nothing happens: the page she is running stands. */
+const presenterBootAt = Date.now();
+let buildCheckBusy = false;
+async function checkPresenterBuild(){
+  if (buildCheckBusy) return;
+  if (Date.now() - presenterBootAt < 20000) return; // let a fresh load settle first
+  buildCheckBusy = true;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch("index.html?cb=" + Date.now(), { cache: "no-store", signal: ctl.signal });
+    clearTimeout(t);
+    if (!r.ok) return;
+    const html = await r.text();
+    const m = /const PRESENTER_BUILD = "([^"]+)"/.exec(html);
+    if (!m) return; // no stamp in the served copy — nothing to converge to
+    const servedBuild = m[1];
+    let attempt = null;
+    try { attempt = JSON.parse(sessionStorage.getItem("presenter-build-attempt-v1") || "null"); } catch (e) {}
+    if (servedBuild === PRESENTER_BUILD) {
+      if (attempt && attempt.stamp === servedBuild) { try { sessionStorage.removeItem("presenter-build-attempt-v1"); } catch (e) {} }
+      return; // she is already running the served code
+    }
+    if (attempt && attempt.stamp === servedBuild && Date.now() - (attempt.at || 0) < 600000) return; // already chased this publish — give it time to land
+    if (sessionOpen || connecting || pumping || queue.length) return; // never cut a read — the next cadence tick retries
+    try { sessionStorage.setItem("presenter-build-attempt-v1", JSON.stringify({ stamp: servedBuild, at: Date.now() })); } catch (e) {}
+    if (armed) { try { sessionStorage.setItem("presenter-rearm-v1", "1"); } catch (e) {} }
+    location.replace(location.pathname + "?pb=" + encodeURIComponent(servedBuild));
+  } catch (e) {}
+  finally { buildCheckBusy = false; }
 }
 async function mintToken(){
   /* Race the discovered ends: the first minter answer (HTTP 200)
@@ -1220,6 +1296,17 @@ if (presReduced) {
   if (k) k.catch(() => {});
 }
 setPill('desk');
+/* Self-update re-arm: if the self-update reload carried her armed
+   state across (the flag checkPresenterBuild set on its way out),
+   bring her back in on the new code — an update must never leave
+   her chair dark. A manual reload carries no flag and lands on
+   her desk, as always. */
+try {
+  if (sessionStorage.getItem("presenter-rearm-v1") === "1") {
+    sessionStorage.removeItem("presenter-rearm-v1");
+    presArm.click();
+  }
+} catch (e) {}
 </script>
 <!-- WC-LINK-COUNTER key=newsroom-preview fp=wcfp-cf91cfcf22 -->
 <script>
