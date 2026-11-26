@@ -1,26 +1,45 @@
 {
  "feed": "sheity-reads",
  "latest": {
-  "id": "2026-11-25-1514",
-  "at": "2026-11-25 15:14 MST",
-  "at_ms": 1795645080856,
-  "feed_at": "2026-11-25 15:13 MST",
-  "text": "Litecoin read, three fourteen P M Mountain, study only. Tactical Analysis. Litecoin is forty two dollars and thirty six cents on the feed, forty two dollars and forty two cents on Binance. Price versus candle on the six hour is plus thirty one cents, green army, a cycle on the locked Litecoin scale, just over the thirty cent line and well under the one dollar big move line. The forming six hour opened at eleven Mountain, price is dead on its middle, so the command post gives no strong conviction by itself. The one hour pulse is red, price sitting on its forming low at forty two thirty six. The three minute is red army pushing, making fresh ground down to forty two thirty four, not slowing yet. No temp top or bottom is lit on the six hour or four hour. Conclusion, wait. No clean best trade. A break below forty two twenty seven resumes red, a reclaim above forty two sixty seven extends green.",
-  "audio": "sheity-reads/2026-11-25-1514.mp3.b64",
+  "id": "2026-11-25-2314",
+  "at": "2026-11-25 23:14 MST",
+  "at_ms": 1795673640000,
+  "feed_at": "2026-11-25 23:29 MST",
+  "text": "Litecoin read, eleven fourteen P M Mountain, study only. Tactical Analysis. Litecoin is forty three dollars and sixty four cents on the feed, forty three dollars and seventy five cents on Binance. Price versus candle on the six hour is plus six cents, green army, quiet, under the thirty cent cycle line. The new six hour candle opened at eleven Mountain. Price sits above its middle at forty three fifty nine. The one hour pulse leans green. The three minute is green army pushing, making fresh ground up to forty three sixty eight. Price is sitting on the six hour temp top at forty three sixty five, lit, but the three minute is pushing into it, not failing. No bottom is lit. Conclusion, wait. No clean best trade. Fresh ground above forty three sixty eight extends green toward forty four. A failure at the top with the three minute littler and pulling back would form the short the top look.",
+  "audio": "sheity-reads/2026-11-25-2314.mp3.b64",
   "audio_format": "mp3-base64",
-  "audio_seconds": 57.96,
-  "price": 42.36,
-  "pvc": 0.31,
+  "audio_seconds": 57.6,
+  "price": 43.64,
+  "pvc": 0.06,
   "army": "GREEN",
-  "three_minute": "RED ARMY PUSHING",
-  "temps": "No Terra/Vega light lit; 6H/4H bottom $42.27, top $42.67/$42.66; 1H bottom $42.36 lit minor only",
+  "three_minute": "GREEN ARMY PUSHING",
+  "temps": "6H/1H top $43.65 LIT; 4H/DAY top $44.00; 6H/4H/1H bottom $43.44 not lit; DAY B $42.72; WEEK T $43.96 / B $39.47; MONTH T $45.42 / B $37.41",
   "conclusion": "WAIT",
   "best_trade": false,
   "voice": "Aria",
-  "face": false
+  "face": true
  },
  "note": "Sheity's every-30-minute Litecoin candle reads, study only, never a trade. Latest first. Audio rides as base64 text (sheity-reads/<id>.mp3.b64) because GitHub Pages holds text files; the chair page decodes it into an mp3 blob before it plays and feeds it to her Simli face.",
  "reads": [
+  {
+   "id": "2026-11-25-2314",
+   "at": "2026-11-25 23:14 MST",
+   "at_ms": 1795673640000,
+   "feed_at": "2026-11-25 23:29 MST",
+   "text": "Litecoin read, eleven fourteen P M Mountain, study only. Tactical Analysis. Litecoin is forty three dollars and sixty four cents on the feed, forty three dollars and seventy five cents on Binance. Price versus candle on the six hour is plus six cents, green army, quiet, under the thirty cent cycle line. The new six hour candle opened at eleven Mountain. Price sits above its middle at forty three fifty nine. The one hour pulse leans green. The three minute is green army pushing, making fresh ground up to forty three sixty eight. Price is sitting on the six hour temp top at forty three sixty five, lit, but the three minute is pushing into it, not failing. No bottom is lit. Conclusion, wait. No clean best trade. Fresh ground above forty three sixty eight extends green toward forty four. A failure at the top with the three minute littler and pulling back would form the short the top look.",
+   "audio": "sheity-reads/2026-11-25-2314.mp3.b64",
+   "audio_format": "mp3-base64",
+   "audio_seconds": 57.6,
+   "price": 43.64,
+   "pvc": 0.06,
+   "army": "GREEN",
+   "three_minute": "GREEN ARMY PUSHING",
+   "temps": "6H/1H top $43.65 LIT; 4H/DAY top $44.00; 6H/4H/1H bottom $43.44 not lit; DAY B $42.72; WEEK T $43.96 / B $39.47; MONTH T $45.42 / B $37.41",
+   "conclusion": "WAIT",
+   "best_trade": false,
+   "voice": "Aria",
+   "face": true
+  },
   {
    "id": "2026-11-25-1514",
    "at": "2026-11-25 15:14 MST",
@@ -229,26 +248,7 @@
    "best_trade": "NONE",
    "voice": "Aria",
    "face": false
-  },
-  {
-   "id": "2026-11-24-0744",
-   "at": "2026-11-24 07:44 MST",
-   "at_ms": 1795531440000,
-   "feed_at": "2026-11-24 07:04 MST",
-   "text": "Litecoin read, seven forty-four in the morning, Tactical Analysis. Price is forty dollars and seventy-three cents on the seven-oh-four feed snapshot, and Binance live is forty dollars and seventy-eight — the feed is about forty-five minutes stale, so I am reading the snapshot plainly and not inventing the half hour since. P V C on the six hour is minus twenty-five and a half cents — Red Army, dead quiet, just under the thirty cent cycle line. The forming six hour opened at five this morning at forty-one twenty-four, fell to forty fifteen, and sits at forty seventy-three, just above its midpoint — no conviction. The one hour fell hard to forty fifteen, bounced to forty ninety-three, and is pulling back. The three minute pushed green on the seven o'clock candle, fresh ground up to forty ninety-three, then the forming candle gave back eleven cents with no fresh ground — the push has not held. No temp light is lit: the one hour top is forty ninety-three, twenty cents above price; the six hour bottom is forty fifteen, fifty-eight cents below. The middle of the forming six hour is forty ninety-eight and a half — price sits twenty-five and a half cents under it, and the bounce stalled five and a half cents under the middle, so the approach is weakening. No clean best trade — long the bottom needs a lit bottom and a green push, short the top needs price on a top, and neither is there. Conclusion: wait. Watch next: reclaim forty ninety-three with fresh ground and the push runs toward forty-one twenty-eight, or lose forty seventy-three and red resumes toward thirty-nine fifty-nine. Study only — nothing placed, nothing sized.",
-   "audio": "sheity-reads/2026-11-24-0744.mp3.b64",
-   "audio_format": "mp3-base64",
-   "audio_seconds": 107.8,
-   "price": 40.73,
-   "pvc": "-$0.255 Red, dead quiet",
-   "army": "RED ARMY",
-   "three_minute": "GREEN PUSHING on last closed candle, forming pulling back — slowing signs",
-   "temps": "none lit — 1H top $40.93 (20¢ above); 6H bottom $40.15 (58¢ below)",
-   "conclusion": "WAIT",
-   "best_trade": "NONE",
-   "voice": "Aria",
-   "face": false
   }
  ],
- "updated": "2026-11-25 15:18 MST"
+ "updated": "2026-11-25 23:14 MST"
 }
